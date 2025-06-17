@@ -1,190 +1,119 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
-const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // Middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public'), {
   extensions: ['html']
 }));
 
-// Konfigurasi API
-const SMM_API_URL = 'https://indosmm.id/api/v2';
-const SMM_API_KEY = '4e59a83d29629d875f9eaa48134d630d';
-const PAYMENT_API_URL = 'https://fupei-pedia.web.id/api/v1/deposit';
-const PAYMENT_API_KEY = 'Fupei-pedia-l3p5q04yqvppzw22';
+// API Proxy Endpoints
+const API_URL = 'https://indosmm.id/api/v2';
 
-// Cache sederhana untuk order
-const orderCache = new Map();
+// Middleware to verify API key
+const verifyApiKey = (req, res, next) => {
+  if (!req.body.key && !req.query.key) {
+    return res.status(400).json({ error: 'API key is required' });
+  }
+  next();
+};
 
-// Endpoint untuk mendapatkan daftar layanan
-app.get('/api/services', async (req, res) => {
+// Get services
+app.post('/api/services', verifyApiKey, async (req, res) => {
   try {
-    const response = await axios.get(SMM_API_URL, {
-      params: {
-        key: SMM_API_KEY,
-        action: 'services'
-      }
+    const response = await axios.post(API_URL, {
+      key: req.body.key,
+      action: 'services'
     });
     res.json(response.data);
   } catch (error) {
-    console.error('Error fetching services:', error);
-    res.status(500).json({ error: 'Gagal mengambil daftar layanan' });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Endpoint untuk membuat order
-app.post('/api/order', async (req, res) => {
-  const { service, link, quantity } = req.body;
-  
+// Add order
+app.post('/api/order', verifyApiKey, async (req, res) => {
   try {
-    // 1. Buat order ke SMM API
-    const smmResponse = await axios.get(SMM_API_URL, {
-      params: {
-        key: SMM_API_KEY,
-        action: 'add',
-        service,
-        link,
-        quantity
-      }
+    const response = await axios.post(API_URL, {
+      key: req.body.key,
+      action: 'add',
+      service: req.body.service,
+      link: req.body.link,
+      quantity: req.body.quantity,
+      runs: req.body.runs,
+      interval: req.body.interval
     });
-    
-    const orderId = smmResponse.data.order;
-    
-    // 2. Hitung total harga (contoh: rate per 1000)
-    const serviceData = await findServiceById(service);
-    const rate = parseFloat(serviceData.rate) || 0.90;
-    const total = Math.ceil((rate * quantity) * 1000); // Konversi ke Rupiah
-    
-    // 3. Buat pembayaran QRIS
-    const paymentResponse = await axios.get(`${PAYMENT_API_URL}/create`, {
-      params: {
-        nominal: total,
-        apikey: PAYMENT_API_KEY
-      }
-    });
-    
-    if (!paymentResponse.data.success) {
-      return res.status(400).json({ 
-        error: 'Gagal membuat pembayaran',
-        details: paymentResponse.data.message 
-      });
-    }
-    
-    const paymentData = paymentResponse.data.data;
-    
-    // Simpan data order ke cache
-    const orderData = {
-      orderId,
-      service,
-      link,
-      quantity,
-      total,
-      payment: {
-        id: paymentData.id,
-        reffId: paymentData.reff_id,
-        qrString: paymentData.qr_string,
-        amount: paymentData.nominal,
-        fee: paymentData.fee,
-        getBalance: paymentData.get_balance,
-        expiredAt: paymentData.expired_at,
-        status: 'pending'
-      },
-      createdAt: new Date().toISOString()
-    };
-    
-    orderCache.set(paymentData.reff_id, orderData);
-    
-    res.json({
-      success: true,
-      order: orderData
-    });
-    
+    res.json(response.data);
   } catch (error) {
-    console.error('Error creating order:', error.response?.data || error.message);
-    res.status(500).json({ 
-      error: 'Gagal membuat order',
-      details: error.response?.data?.message || error.message 
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Endpoint untuk memeriksa status pembayaran
-app.get('/api/payment/status/:reffId', async (req, res) => {
+// Check order status
+app.post('/api/order/status', verifyApiKey, async (req, res) => {
   try {
-    // 1. Cek di cache dulu
-    const orderData = orderCache.get(req.params.reffId);
-    if (!orderData) {
-      return res.status(404).json({ error: 'Order tidak ditemukan' });
-    }
-    
-    // 2. Cek status pembayaran ke API
-    const response = await axios.get(`${PAYMENT_API_URL}/status`, {
-      params: {
-        trxid: orderData.payment.id,
-        apikey: PAYMENT_API_KEY
-      }
+    const response = await axios.post(API_URL, {
+      key: req.body.key,
+      action: 'status',
+      order: req.body.order
     });
-    
-    if (response.data.success && response.data.data.status === 'success') {
-      // Update status di cache
-      orderData.payment.status = 'completed';
-      orderCache.set(req.params.reffId, orderData);
-    }
-    
-    res.json({
-      status: response.data.data.status,
-      order: orderData
-    });
-    
+    res.json(response.data);
   } catch (error) {
-    console.error('Error checking payment status:', error);
-    res.status(500).json({ 
-      error: 'Gagal memeriksa status pembayaran',
-      details: error.response?.data?.message || error.message 
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Helper function untuk mencari service by ID
-async function findServiceById(serviceId) {
+// Check balance
+app.post('/api/balance', verifyApiKey, async (req, res) => {
   try {
-    const response = await axios.get(SMM_API_URL, {
-      params: {
-        key: SMM_API_KEY,
-        action: 'services'
-      }
+    const response = await axios.post(API_URL, {
+      key: req.body.key,
+      action: 'balance'
     });
-    return response.data.find(s => s.service == serviceId) || {};
+    res.json(response.data);
   } catch (error) {
-    console.error('Error finding service:', error);
-    return {};
-  }
-}
-
-// Middleware untuk menangani permintaan tanpa ekstensi .html
-app.use((req, res, next) => {
-  if (path.extname(req.path) === '') {
-    const htmlPath = path.join(__dirname, 'public', req.path + '.html');
-    fs.access(htmlPath, fs.constants.F_OK, (err) => {
-      if (!err) {
-        res.sendFile(htmlPath);
-      } else {
-        next();
-      }
-    });
-  } else {
-    next();
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Handle all other routes
+// Refill order
+app.post('/api/order/refill', verifyApiKey, async (req, res) => {
+  try {
+    const response = await axios.post(API_URL, {
+      key: req.body.key,
+      action: 'refill',
+      order: req.body.order
+    });
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cancel order
+app.post('/api/order/cancel', verifyApiKey, async (req, res) => {
+  try {
+    const response = await axios.post(API_URL, {
+      key: req.body.key,
+      action: 'cancel',
+      orders: req.body.orders
+    });
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Handle all other routes by serving the index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
