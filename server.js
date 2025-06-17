@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -8,6 +9,19 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Config
+const INDO_SMM_API = {
+  key: process.env.INDO_SMM_API_KEY || '4e59a83d29629d875f9eaa48134d630d',
+  url: 'https://indosmm.id/api/v2'
+};
+
+const PAYMENT_API = {
+  key: process.env.HIAY_API_KEY || 'Fupei-pedia-l3p5q04yqvppzw22',
+  url: 'https://fupei-pedia.web.id/api/v1/deposit'
+};
+
+const PRICE_MARKUP = process.env.PRICE_MARKUP || 20; // 20% markup
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -16,226 +30,244 @@ app.use(express.static(path.join(__dirname, 'public'), {
   extensions: ['html']
 }));
 
-// Konfigurasi API
-const INDO_SMM_API = {
-  key: '4e59a83d29629d875f9eaa48134d630d',
-  url: 'https://indosmm.id/api/v2'
+// Data storage
+const data = {
+  services: [],
+  orders: {},
+  payments: {},
+  lastServiceUpdate: null
 };
 
-const PAYMENT_API = {
-  key: 'Fupei-pedia-l3p5q04yqvppzw22',
-  url: 'https://fupei-pedia.web.id/api/v1/deposit'
+// Helper functions
+const calculatePrice = (rate, quantity) => {
+  const markedUpRate = rate * (1 + PRICE_MARKUP / 100);
+  return (markedUpRate * quantity).toFixed(2);
 };
 
-// Markup harga (dalam persen)
-const PRICE_MARKUP = 20; // 20% markup
+// API Endpoints
 
-// Simpan data sementara di memory
-const orders = {};
-const payments = {};
-const servicesCache = {
-  data: null,
-  lastUpdated: null
-};
-
-// Endpoint untuk layanan SMM
+// Get all services
 app.get('/api/services', async (req, res) => {
   try {
-    // Gunakan cache jika tersedia dan belum kadaluarsa (5 menit)
-    if (servicesCache.data && Date.now() - servicesCache.lastUpdated < 300000) {
-      return res.json(servicesCache.data);
+    // Cache services for 5 minutes
+    if (data.services.length > 0 && Date.now() - data.lastServiceUpdate < 300000) {
+      return res.json(data.services);
     }
 
     const response = await axios.get(INDO_SMM_API.url, {
-      params: {
-        key: INDO_SMM_API.key,
-        action: 'services'
-      }
+      params: { key: INDO_SMM_API.key, action: 'services' }
     });
 
-    // Tambahkan markup harga dan simpan ke cache
-    const servicesWithMarkup = response.data.map(service => ({
+    data.services = response.data.map(service => ({
       ...service,
-      originalRate: service.rate,
-      rate: (parseFloat(service.rate) * (1 + PRICE_MARKUP / 100)).toFixed(2)
+      originalRate: parseFloat(service.rate),
+      rate: parseFloat(service.rate) * (1 + PRICE_MARKUP / 100)
     }));
+    data.lastServiceUpdate = Date.now();
 
-    servicesCache.data = servicesWithMarkup;
-    servicesCache.lastUpdated = Date.now();
-
-    res.json(servicesWithMarkup);
+    res.json(data.services);
   } catch (error) {
-    console.error('Error fetching services:', error);
-    res.status(500).json({ error: 'Gagal memuat layanan' });
+    console.error('Services error:', error.message);
+    res.status(500).json({ error: 'Failed to load services' });
   }
 });
 
-// Endpoint untuk kategori layanan
-app.get('/api/categories', async (req, res) => {
-  try {
-    const services = servicesCache.data || (await axios.get(`${INDO_SMM_API.url}?key=${INDO_SMM_API.key}&action=services`)).data;
-    
-    const categories = [...new Set(services.map(service => service.category))];
-    res.json(categories);
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    res.status(500).json({ error: 'Gagal memuat kategori' });
-  }
+// Get service categories
+app.get('/api/categories', (req, res) => {
+  const categories = [...new Set(data.services.map(s => s.category))];
+  res.json(categories);
 });
 
-// Endpoint untuk membuat pesanan
-app.post('/api/order', async (req, res) => {
+// Create new order
+app.post('/api/orders', async (req, res) => {
   const { serviceId, link, quantity } = req.body;
 
   try {
-    // Dapatkan detail layanan untuk memverifikasi
-    const service = servicesCache.data.find(s => s.service == serviceId);
-    if (!service) {
-      return res.status(400).json({ error: 'Layanan tidak ditemukan' });
+    const service = data.services.find(s => s.service == serviceId);
+    if (!service) return res.status(400).json({ error: 'Service not found' });
+
+    // Validate quantity
+    const qty = parseInt(quantity);
+    if (qty < service.min || qty > service.max) {
+      return res.status(400).json({ 
+        error: `Quantity must be between ${service.min} and ${service.max}`
+      });
     }
 
-    // Buat pesanan ke Indo SMM
-    const orderResponse = await axios.get(INDO_SMM_API.url, {
+    // Create order with Indo SMM
+    const orderRes = await axios.get(INDO_SMM_API.url, {
       params: {
         key: INDO_SMM_API.key,
         action: 'add',
         service: serviceId,
         link,
-        quantity
+        quantity: qty
       }
     });
 
-    const orderId = orderResponse.data.order;
-    const totalPrice = (service.rate * quantity).toFixed(2);
+    const orderId = orderRes.data.order;
+    const totalPrice = calculatePrice(service.originalRate, qty);
 
-    // Simpan order sementara
-    orders[orderId] = {
+    data.orders[orderId] = {
+      id: orderId,
       serviceId,
       serviceName: service.name,
       link,
-      quantity,
+      quantity: qty,
       price: totalPrice,
       status: 'pending_payment',
-      createdAt: new Date()
+      createdAt: new Date(),
+      completed: 0
     };
 
     res.json({ 
-      success: true, 
+      success: true,
       orderId,
       amount: totalPrice,
       serviceName: service.name
     });
+
   } catch (error) {
-    console.error('Error creating order:', error);
-    res.status(500).json({ error: 'Gagal membuat pesanan' });
+    console.error('Order error:', error.message);
+    res.status(500).json({ error: 'Failed to create order' });
   }
 });
 
-// Endpoint untuk pembayaran QRIS
-app.post('/api/create-payment', async (req, res) => {
+// Create payment
+app.post('/api/payments', async (req, res) => {
   const { orderId, amount } = req.body;
 
   try {
-    // Verifikasi order
-    if (!orders[orderId]) {
-      return res.status(404).json({ error: 'Pesanan tidak ditemukan' });
+    if (!data.orders[orderId]) {
+      return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Buat pembayaran ke Hiay Payment
-    const paymentResponse = await axios.get(`${PAYMENT_API.url}/create`, {
+    const paymentRes = await axios.get(`${PAYMENT_API.url}/create`, {
       params: {
-        nominal: amount,
+        nominal: amount * 1000, // Convert to Rupiah
         apikey: PAYMENT_API.key
       },
-      headers: {
-        'User-Agent': 'Mozilla/5.0'
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
-    if (!paymentResponse.data.success) {
-      return res.status(400).json({ error: paymentResponse.data.message || 'Gagal membuat pembayaran' });
+    if (!paymentRes.data.success) {
+      return res.status(400).json({ error: paymentRes.data.message });
     }
 
-    const paymentData = paymentResponse.data.data;
-    const qrImage = qr.imageSync(paymentData.qr_string, { type: 'png' });
+    const payment = paymentRes.data.data;
+    const qrImage = qr.imageSync(payment.qr_string, { type: 'png' });
 
-    // Simpan data pembayaran
-    payments[paymentData.reff_id] = {
+    data.payments[payment.reff_id] = {
+      id: payment.reff_id,
       orderId,
-      paymentId: paymentData.id,
-      amount: paymentData.nominal,
-      qrString: paymentData.qr_string,
-      expiredAt: paymentData.expired_at,
+      paymentId: payment.id,
+      amount: payment.nominal,
+      qrString: payment.qr_string,
+      expiredAt: payment.expired_at,
       status: 'pending'
     };
 
     res.json({
       success: true,
-      paymentId: paymentData.reff_id,
+      paymentId: payment.reff_id,
       qrImage: `data:image/png;base64,${qrImage.toString('base64')}`,
-      qrString: paymentData.qr_string,
-      amount: paymentData.nominal,
-      expiredAt: paymentData.expired_at
+      qrString: payment.qr_string,
+      amount: payment.nominal,
+      fee: payment.fee,
+      expiredAt: payment.expired_at
     });
+
   } catch (error) {
-    console.error('Error creating payment:', error);
-    res.status(500).json({ error: 'Gagal membuat pembayaran' });
+    console.error('Payment error:', error.message);
+    res.status(500).json({ error: 'Failed to create payment' });
   }
 });
 
-// Endpoint untuk cek status pembayaran
-app.get('/api/check-payment/:paymentId', async (req, res) => {
+// Check payment status
+app.get('/api/payments/:paymentId/status', async (req, res) => {
   const { paymentId } = req.params;
 
   try {
-    // Cek di local storage dulu
-    if (payments[paymentId] && payments[paymentId].status === 'paid') {
+    const payment = data.payments[paymentId];
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+    if (payment.status === 'paid') {
       return res.json({ 
         success: true, 
         status: 'paid',
-        orderId: payments[paymentId].orderId
+        orderId: payment.orderId
       });
     }
 
-    // Cek ke payment gateway
-    const statusResponse = await axios.get(`${PAYMENT_API.url}/status`, {
+    const statusRes = await axios.get(`${PAYMENT_API.url}/status`, {
       params: {
-        trxid: payments[paymentId]?.paymentId,
+        trxid: payment.paymentId,
         apikey: PAYMENT_API.key
       },
-      headers: {
-        'User-Agent': 'Mozilla/5.0'
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
-    if (statusResponse.data.success && statusResponse.data.data.status === 'success') {
-      // Update status pembayaran
-      payments[paymentId].status = 'paid';
+    if (statusRes.data.success && statusRes.data.data.status === 'success') {
+      payment.status = 'paid';
+      data.orders[payment.orderId].status = 'processing';
       
-      // Update status order
-      const orderId = payments[paymentId].orderId;
-      if (orders[orderId]) {
-        orders[orderId].status = 'processing';
-      }
-
       return res.json({ 
         success: true, 
         status: 'paid',
-        orderId
+        orderId: payment.orderId
       });
     }
 
     res.json({ 
       success: true, 
-      status: payments[paymentId]?.status || 'pending'
+      status: payment.status 
     });
+
   } catch (error) {
-    console.error('Error checking payment:', error);
-    res.status(500).json({ error: 'Gagal memeriksa status pembayaran' });
+    console.error('Payment status error:', error.message);
+    res.status(500).json({ error: 'Failed to check payment status' });
   }
 });
 
-// Middleware untuk halaman HTML
+// Check order status
+app.get('/api/orders/:orderId/status', async (req, res) => {
+  const { orderId } = req.params;
+
+  try {
+    const order = data.orders[orderId];
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const statusRes = await axios.get(INDO_SMM_API.url, {
+      params: {
+        key: INDO_SMM_API.key,
+        action: 'status',
+        order: orderId
+      }
+    });
+
+    if (statusRes.data.error) {
+      return res.status(400).json({ error: statusRes.data.error });
+    }
+
+    // Update order status
+    order.status = statusRes.data.status.toLowerCase();
+    order.completed = parseInt(statusRes.data.start_count) || 0;
+    order.remains = parseInt(statusRes.data.remains) || 0;
+
+    res.json({
+      success: true,
+      status: order.status,
+      completed: order.completed,
+      remains: order.remains
+    });
+
+  } catch (error) {
+    console.error('Order status error:', error.message);
+    res.status(500).json({ error: 'Failed to check order status' });
+  }
+});
+
+// HTML Routes
 app.use((req, res, next) => {
   if (path.extname(req.path) === '') {
     const htmlPath = path.join(__dirname, 'public', req.path + '.html');
@@ -248,11 +280,10 @@ app.use((req, res, next) => {
   }
 });
 
-// Default route
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(port, () => {
-  console.log(`Server berjalan di port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
