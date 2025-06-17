@@ -1,210 +1,171 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // Tab switching functionality
-  const tabs = document.querySelectorAll('nav li');
+  // Elements
+  const apiKeyInput = document.getElementById('apiKey');
+  const saveKeyBtn = document.getElementById('saveKey');
+  const tabItems = document.querySelectorAll('.menu-item');
   const tabContents = document.querySelectorAll('.tab-content');
+  const serviceSearch = document.getElementById('serviceSearch');
+  const categoryFilter = document.getElementById('categoryFilter');
+  const servicesList = document.getElementById('servicesList');
+  const ordersList = document.getElementById('ordersList');
+  const balanceInfo = document.getElementById('balanceInfo');
+  const orderModal = document.getElementById('orderModal');
+  const paymentModal = document.getElementById('paymentModal');
+  const closeButtons = document.querySelectorAll('.close');
+  const orderForm = document.getElementById('orderForm');
   
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      // Remove active class from all tabs and contents
-      tabs.forEach(t => t.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-      
-      // Add active class to clicked tab and corresponding content
-      tab.classList.add('active');
-      const tabId = tab.getAttribute('data-tab');
-      document.getElementById(tabId).classList.add('active');
-      
-      // Load data when switching to specific tabs
-      if (tabId === 'services') {
-        loadServices();
-      } else if (tabId === 'orders') {
-        loadOrders();
-      } else if (tabId === 'new-order') {
-        populateServiceDropdown();
-      }
+  // State
+  let currentService = null;
+  let currentOrder = null;
+  let paymentCheckInterval = null;
+  
+  // Load saved API key
+  const savedApiKey = localStorage.getItem('smmPanelApiKey');
+  if (savedApiKey) {
+    apiKeyInput.value = savedApiKey;
+    loadServices();
+    loadOrders();
+    loadBalance();
+  }
+  
+  // Event Listeners
+  saveKeyBtn.addEventListener('click', saveApiKey);
+  
+  tabItems.forEach(item => {
+    item.addEventListener('click', switchTab);
+  });
+  
+  serviceSearch.addEventListener('input', filterServices);
+  categoryFilter.addEventListener('change', filterServices);
+  
+  closeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      orderModal.style.display = 'none';
+      paymentModal.style.display = 'none';
+      clearPaymentCheck();
     });
   });
   
-  // API key is fixed
-  const API_KEY = '4e59a83d29629d875f9eaa48134d630d';
+  orderForm.addEventListener('submit', createOrder);
   
-  // Initial data loading
-  loadBalance();
-  loadServices();
-  loadOrders();
-  populateServiceDropdown();
-  
-  // Refresh balance button
-  document.getElementById('refresh-balance').addEventListener('click', loadBalance);
-  
-  // Refresh orders button
-  document.getElementById('refresh-orders').addEventListener('click', loadOrders);
-  
-  // Modal functionality
-  const modal = document.getElementById('order-modal');
-  const closeModal = document.querySelector('.close-modal');
-  
-  closeModal.addEventListener('click', () => {
-    modal.style.display = 'none';
-  });
-  
+  // Close modals when clicking outside
   window.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.style.display = 'none';
+    if (e.target === orderModal) {
+      orderModal.style.display = 'none';
+    }
+    if (e.target === paymentModal) {
+      paymentModal.style.display = 'none';
+      clearPaymentCheck();
     }
   });
   
-  // Service search functionality
-  const serviceSearch = document.getElementById('service-search');
-  serviceSearch.addEventListener('input', filterServices);
-  
-  // Category filter functionality
-  const categoryFilter = document.getElementById('category-filter');
-  categoryFilter.addEventListener('change', filterServices);
-  
-  // Order status filter functionality
-  const orderStatusFilter = document.getElementById('order-status-filter');
-  orderStatusFilter.addEventListener('change', filterOrders);
-  
-  // New order form functionality
-  const orderForm = document.getElementById('order-form');
-  const serviceSelect = document.getElementById('service-select');
-  const serviceQuantity = document.getElementById('service-quantity');
-  
-  orderForm.addEventListener('submit', placeOrder);
-  serviceSelect.addEventListener('change', updateQuantityRange);
-  serviceQuantity.addEventListener('input', calculateEstimatedPrice);
-  
-  // Deposit functionality
-  document.getElementById('create-deposit').addEventListener('click', createDeposit);
-  document.getElementById('check-payment').addEventListener('click', checkPaymentStatus);
-  
   // Functions
-  function showError(message) {
-    alert('Error: ' + message);
-  }
-  
-  function loadBalance() {
-    fetch('/api/balance', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ key: API_KEY })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        showError(data.error);
-      } else {
-        document.getElementById('balance-amount').textContent = 
-          `Rp${parseInt(data.balance).toLocaleString('id-ID')}`;
-      }
-    })
-    .catch(error => {
-      showError(error.message);
-    });
-  }
-  
-  function loadServices() {
-    const servicesList = document.getElementById('services-list');
-    servicesList.innerHTML = '<div class="loading">Memuat layanan...</div>';
-    
-    fetch('/api/services', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ key: API_KEY })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        showError(data.error);
-        servicesList.innerHTML = `<div class="error">${data.error}</div>`;
-      } else {
-        renderServices(data);
-        populateCategoryFilter(data);
-      }
-    })
-    .catch(error => {
-      showError(error.message);
-      servicesList.innerHTML = `<div class="error">${error.message}</div>`;
-    });
-  }
-  
-  function renderServices(services) {
-    const servicesList = document.getElementById('services-list');
-    
-    if (services.length === 0) {
-      servicesList.innerHTML = '<div class="no-results">Tidak ada layanan ditemukan</div>';
+  function saveApiKey() {
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey) {
+      alert('API Key tidak boleh kosong');
       return;
     }
     
-    let html = '';
+    localStorage.setItem('smmPanelApiKey', apiKey);
+    alert('API Key berhasil disimpan');
+    loadServices();
+    loadOrders();
+    loadBalance();
+  }
+  
+  function switchTab(e) {
+    const tabId = e.currentTarget.getAttribute('data-tab');
     
-    services.forEach(service => {
-      html += `
-        <div class="service-card" data-category="${service.category}">
-          <h3>${service.name}</h3>
-          <div class="service-meta">
-            <span class="service-type">${service.type}</span>
-            <span class="service-price">Rp${(service.rate * 1000).toLocaleString('id-ID')} per 1000</span>
-          </div>
-          <div class="service-minmax">Min: ${service.min} - Maks: ${service.max}</div>
-          <div class="service-desc">${service.description || 'Tidak ada deskripsi'}</div>
-          <div class="service-actions">
-            <button class="order-btn" data-service-id="${service.service}" 
-              data-rate="${service.rate}" data-min="${service.min}" data-max="${service.max}">
-              Pesan Sekarang
-            </button>
-          </div>
-        </div>
-      `;
+    tabItems.forEach(item => {
+      item.classList.remove('active');
     });
     
-    servicesList.innerHTML = html;
+    tabContents.forEach(content => {
+      content.classList.remove('active');
+    });
+    
+    e.currentTarget.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+    
+    if (tabId === 'services') {
+      loadServices();
+    } else if (tabId === 'orders') {
+      loadOrders();
+    } else if (tabId === 'balance') {
+      loadBalance();
+    }
+  }
+  
+  async function loadServices() {
+    const apiKey = localStorage.getItem('smmPanelApiKey');
+    if (!apiKey) return;
+    
+    servicesList.innerHTML = '<div class="loading">Memuat layanan...</div>';
+    
+    try {
+      const response = await fetch('/api/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ key: apiKey })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        renderServices(data);
+        updateCategoryFilter(data);
+      } else {
+        servicesList.innerHTML = `<div class="error">${data.error || 'Gagal memuat layanan'}</div>`;
+      }
+    } catch (error) {
+      servicesList.innerHTML = `<div class="error">Terjadi kesalahan: ${error.message}</div>`;
+    }
+  }
+  
+  function renderServices(services) {
+    if (!services || services.length === 0) {
+      servicesList.innerHTML = '<div class="empty">Tidak ada layanan tersedia</div>';
+      return;
+    }
+    
+    servicesList.innerHTML = '';
+    
+    services.forEach(service => {
+      const serviceCard = document.createElement('div');
+      serviceCard.className = 'service-card';
+      serviceCard.dataset.category = service.category;
+      
+      serviceCard.innerHTML = `
+        <h3>${service.name}</h3>
+        <div class="service-meta">
+          <span class="service-type">${service.type}</span>
+          <span class="service-category">${service.category}</span>
+        </div>
+        <div class="service-price">Rp${(parseFloat(service.rate) * 1.2).toFixed(2)} / 1000</div>
+        <div class="service-limits">Min: ${service.min}, Max: ${service.max}</div>
+        <button class="btn-order-service" data-id="${service.service}">Pesan Sekarang</button>
+      `;
+      
+      servicesList.appendChild(serviceCard);
+    });
     
     // Add event listeners to order buttons
-    document.querySelectorAll('.order-btn').forEach(button => {
-      button.addEventListener('click', function() {
-        const serviceId = this.getAttribute('data-service-id');
-        const rate = this.getAttribute('data-rate');
-        const min = this.getAttribute('data-min');
-        const max = this.getAttribute('data-max');
-        
-        // Switch to new order tab
-        document.querySelector('nav li[data-tab="new-order"]').click();
-        
-        // Set the service in the dropdown
-        const serviceSelect = document.getElementById('service-select');
-        serviceSelect.value = serviceId;
-        
-        // Update the quantity range
-        document.getElementById('quantity-range').textContent = `Min: ${min} - Maks: ${max}`;
-        document.getElementById('service-quantity').min = min;
-        document.getElementById('service-quantity').max = max;
-        document.getElementById('service-quantity').value = min;
-        
-        // Calculate initial price
-        calculateEstimatedPrice();
+    document.querySelectorAll('.btn-order-service').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const serviceId = e.currentTarget.getAttribute('data-id');
+        currentService = services.find(s => s.service == serviceId);
+        openOrderModal(currentService);
       });
     });
   }
   
-  function populateCategoryFilter(services) {
-    const categoryFilter = document.getElementById('category-filter');
-    const categories = new Set();
-    
-    // Add default option
+  function updateCategoryFilter(services) {
+    const categories = [...new Set(services.map(s => s.category))];
     categoryFilter.innerHTML = '<option value="">Semua Kategori</option>';
     
-    // Collect unique categories
-    services.forEach(service => {
-      categories.add(service.category);
-    });
-    
-    // Add category options
     categories.forEach(category => {
       const option = document.createElement('option');
       option.value = category;
@@ -214,16 +175,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function filterServices() {
-    const searchTerm = document.getElementById('service-search').value.toLowerCase();
-    const category = document.getElementById('category-filter').value;
-    const serviceCards = document.querySelectorAll('.service-card');
+    const searchTerm = serviceSearch.value.toLowerCase();
+    const selectedCategory = categoryFilter.value;
     
-    serviceCards.forEach(card => {
-      const serviceName = card.querySelector('h3').textContent.toLowerCase();
-      const serviceCategory = card.getAttribute('data-category');
-      
-      const matchesSearch = serviceName.includes(searchTerm);
-      const matchesCategory = category === '' || serviceCategory === category;
+    document.querySelectorAll('.service-card').forEach(card => {
+      const matchesSearch = card.textContent.toLowerCase().includes(searchTerm);
+      const matchesCategory = !selectedCategory || card.dataset.category === selectedCategory;
       
       if (matchesSearch && matchesCategory) {
         card.style.display = 'block';
@@ -233,306 +190,222 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  function loadOrders() {
-    const ordersList = document.getElementById('orders-list');
-    ordersList.innerHTML = '<div class="loading">Memuat pesanan...</div>';
-    
-    // In a real app, you would fetch actual orders from the API
-    // For now, we'll simulate it with a timeout
-    setTimeout(() => {
-      ordersList.innerHTML = `
-        <div class="order-card">
-          <div class="order-info">
-            <h3>Instagram Followers</h3>
-            <div class="order-meta">
-              <span>Pesanan #23501</span>
-              <span>Jumlah: 1000</span>
-              <span>Harga: Rp900</span>
-            </div>
-            <div class="order-status status-in-progress">Dalam Proses</div>
-          </div>
-          <div class="order-actions">
-            <button class="action-btn details-btn">Detail</button>
-          </div>
-        </div>
-      `;
-      
-      // Add event listeners to order action buttons
-      document.querySelectorAll('.details-btn').forEach(button => {
-        button.addEventListener('click', showOrderDetails);
-      });
-    }, 1000);
-  }
-  
-  function filterOrders() {
-    const statusFilter = document.getElementById('order-status-filter').value;
-    const orderCards = document.querySelectorAll('.order-card');
-    
-    orderCards.forEach(card => {
-      const statusElement = card.querySelector('.order-status');
-      if (!statusElement) return;
-      
-      const status = statusElement.textContent;
-      
-      if (statusFilter === 'all' || status === statusFilter) {
-        card.style.display = 'flex';
-      } else {
-        card.style.display = 'none';
-      }
-    });
-  }
-  
-  function showOrderDetails() {
-    const modal = document.getElementById('order-modal');
-    const orderDetails = document.getElementById('order-details');
-    
-    // In a real app, you would fetch actual order details from the API
-    orderDetails.innerHTML = `
-      <div class="order-detail">
-        <h4>Informasi Pesanan</h4>
-        <p><strong>Layanan:</strong> Instagram Followers</p>
-        <p><strong>ID Pesanan:</strong> 23501</p>
-        <p><strong>Link:</strong> https://instagram.com/username</p>
-        <p><strong>Jumlah:</strong> 1000</p>
-        <p><strong>Harga:</strong> Rp900</p>
-        <p><strong>Status:</strong> Dalam Proses</p>
-        <p><strong>Jumlah Mulai:</strong> 3572</p>
-        <p><strong>Sisa:</strong> 157</p>
-      </div>
+  function openOrderModal(service) {
+    document.getElementById('serviceInfo').innerHTML = `
+      <h3>${service.name}</h3>
+      <p>${service.type} - ${service.category}</p>
+      <p>Rate: Rp${service.rate} / 1000</p>
     `;
     
-    modal.style.display = 'flex';
+    document.getElementById('minQuantity').textContent = service.min;
+    document.getElementById('maxQuantity').textContent = service.max;
+    document.getElementById('quantity').min = service.min;
+    document.getElementById('quantity').max = service.max;
+    document.getElementById('quantity').value = service.min;
+    document.getElementById('rate').textContent = `Rp${(parseFloat(service.rate) * 1.2}`;
+    
+    updateTotalPrice(service, service.min);
+    
+    orderModal.style.display = 'block';
   }
   
-  function populateServiceDropdown() {
-    const serviceSelect = document.getElementById('service-select');
-    serviceSelect.innerHTML = '<option value="">Pilih layanan</option>';
-    
-    fetch('/api/services', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ key: API_KEY })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        showError(data.error);
-      } else {
-        data.forEach(service => {
-          const option = document.createElement('option');
-          option.value = service.service;
-          option.textContent = `${service.name} (Rp${(service.rate * 1000).toLocaleString('id-ID')} per 1000)`;
-          option.setAttribute('data-rate', service.rate);
-          option.setAttribute('data-min', service.min);
-          option.setAttribute('data-max', service.max);
-          serviceSelect.appendChild(option);
-        });
-      }
-    })
-    .catch(error => {
-      showError(error.message);
-    });
+  function updateTotalPrice(service, quantity) {
+    const rate = parseFloat(service.rate) * 1.2; // Apply 20% markup
+    const totalPrice = Math.ceil((rate * quantity) / 1000);
+    document.getElementById('totalPrice').textContent = `Rp${totalPrice}`;
   }
   
-  function updateQuantityRange() {
-    const selectedOption = this.options[this.selectedIndex];
-    if (!selectedOption.value) return;
-    
-    const min = selectedOption.getAttribute('data-min');
-    const max = selectedOption.getAttribute('data-max');
-    
-    document.getElementById('quantity-range').textContent = `Min: ${min} - Maks: ${max}`;
-    document.getElementById('service-quantity').min = min;
-    document.getElementById('service-quantity').max = max;
-    document.getElementById('service-quantity').value = min;
-    
-    calculateEstimatedPrice();
-  }
-  
-  function calculateEstimatedPrice() {
-    const selectedOption = document.getElementById('service-select').options[
-      document.getElementById('service-select').selectedIndex
-    ];
-    
-    if (!selectedOption || !selectedOption.value) {
-      document.getElementById('estimated-price').textContent = 'Rp0';
-      return;
+  // Quantity input event listener
+  document.getElementById('quantity').addEventListener('input', function() {
+    if (currentService) {
+      const quantity = parseInt(this.value) || 0;
+      updateTotalPrice(currentService, quantity);
     }
-    
-    const rate = parseFloat(selectedOption.getAttribute('data-rate'));
-    const quantity = parseInt(document.getElementById('service-quantity').value) || 0;
-    
-    const price = (rate * quantity).toFixed(0);
-    document.getElementById('estimated-price').textContent = `Rp${price.toLocaleString('id-ID')}`;
-  }
+  });
   
-  function placeOrder(e) {
+  async function createOrder(e) {
     e.preventDefault();
     
-    const serviceId = document.getElementById('service-select').value;
-    const link = document.getElementById('service-link').value;
-    const quantity = document.getElementById('service-quantity').value;
-    const runs = document.getElementById('service-runs').value;
-    const interval = document.getElementById('service-interval').value;
-    const estimatedPrice = document.getElementById('estimated-price').textContent.replace(/[^\d]/g, '');
-    
-    if (!serviceId || !link || !quantity) {
-      showError('Harap isi semua field yang diperlukan');
+    const apiKey = localStorage.getItem('smmPanelApiKey');
+    if (!apiKey) {
+      alert('Silakan masukkan API Key terlebih dahulu');
       return;
     }
     
-    // Check if balance is sufficient
-    const balanceText = document.getElementById('balance-amount').textContent;
-    const currentBalance = parseInt(balanceText.replace(/[^\d]/g, '') || 0;
+    const link = document.getElementById('targetLink').value;
+    const quantity = document.getElementById('quantity').value;
     
-    if (currentBalance < parseInt(estimatedPrice)) {
-      const confirmDeposit = confirm('Saldo Anda tidak mencukupi. Apakah Anda ingin melakukan deposit sekarang?');
-      if (confirmDeposit) {
-        document.querySelector('nav li[data-tab="deposit"]').click();
-        document.getElementById('deposit-amount').value = Math.max(10000, parseInt(estimatedPrice) - currentBalance + 10000);
-      }
+    if (!link || !quantity) {
+      alert('Silakan lengkapi semua field');
       return;
     }
     
-    const orderData = {
-      key: API_KEY,
-      action: 'add',
-      service: serviceId,
-      link: link,
-      quantity: quantity
-    };
-    
-    if (runs) orderData.runs = runs;
-    if (interval) orderData.interval = interval;
-    
-    fetch('/api/order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(orderData)
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        showError(data.error);
-      } else {
-        alert(`Pesanan berhasil dibuat! ID Pesanan: ${data.order}`);
-        // Reset form
-        document.getElementById('order-form').reset();
-        document.getElementById('estimated-price').textContent = 'Rp0';
-        // Switch to orders tab
-        document.querySelector('nav li[data-tab="orders"]').click();
-        // Refresh orders list and balance
-        loadOrders();
-        loadBalance();
-      }
-    })
-    .catch(error => {
-      showError(error.message);
-    });
-  }
-  
-  function createDeposit() {
-    const amount = parseInt(document.getElementById('deposit-amount').value);
-    
-    if (!amount || amount < 10000) {
-      showError('Jumlah minimal deposit adalah Rp10,000');
-      return;
-    }
-    
-    fetch('/api/payment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ amount: amount })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        showError(data.error);
-      } else {
-        const paymentInfo = data.data;
-        
-        // Show QR code
-        const qrContainer = document.getElementById('qr-code-container');
-        qrContainer.innerHTML = `<img src="data:image/png;base64,${paymentInfo.qr_image}" alt="QR Code">`;
-        
-        // Show payment details
-        const paymentDetails = document.getElementById('payment-details');
-        paymentDetails.innerHTML = `
-          <p><strong>ID Transaksi:</strong> ${paymentInfo.reff_id}</p>
-          <p><strong>Jumlah Deposit:</strong> Rp${paymentInfo.nominal.toLocaleString('id-ID')}</p>
-          <p><strong>Biaya Admin:</strong> Rp${paymentInfo.fee.toLocaleString('id-ID')}</p>
-          <p><strong>Saldo Diterima:</strong> Rp${paymentInfo.get_balance.toLocaleString('id-ID')}</p>
-          <p><strong>Batas Waktu:</strong> ${paymentInfo.expired_at}</p>
-          <p><strong>QR String:</strong> ${paymentInfo.qr_string}</p>
-        `;
-        
-        // Store transaction ID for checking status
-        document.getElementById('payment-info').setAttribute('data-trxid', paymentInfo.id);
-        
-        // Show payment info section
-        document.getElementById('payment-info').style.display = 'block';
-        
-        // Start checking payment status periodically
-        localStorage.setItem('lastDepositTrxId', paymentInfo.id);
-        localStorage.setItem('lastDepositAmount', paymentInfo.get_balance);
-      }
-    })
-    .catch(error => {
-      showError(error.message);
-    });
-  }
-  
-  function checkPaymentStatus() {
-    const trxid = document.getElementById('payment-info').getAttribute('data-trxid');
-    if (!trxid) return;
-    
-    fetch(`/api/payment/status/${trxid}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.error) {
-          showError(data.error);
-        } else {
-          if (data.data.status === 'success') {
-            alert('Pembayaran berhasil! Saldo Anda akan diperbarui.');
-            loadBalance();
-          } else {
-            alert('Pembayaran belum diterima. Silakan coba lagi nanti.');
-          }
-        }
-      })
-      .catch(error => {
-        showError(error.message);
-      });
-  }
-  
-  // Check for pending deposit on page load
-  function checkPendingDeposit() {
-    const lastTrxId = localStorage.getItem('lastDepositTrxId');
-    if (lastTrxId) {
-      fetch(`/api/payment/status/${lastTrxId}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.success && data.data.status === 'success') {
-            const depositAmount = localStorage.getItem('lastDepositAmount');
-            alert(`Deposit sebesar Rp${parseInt(depositAmount).toLocaleString('id-ID')} telah berhasil!`);
-            loadBalance();
-          }
-          localStorage.removeItem('lastDepositTrxId');
-          localStorage.removeItem('lastDepositAmount');
+    try {
+      const response = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          serviceId: currentService.service,
+          link: link,
+          quantity: quantity,
+          key: apiKey
         })
-        .catch(() => {
-          localStorage.removeItem('lastDepositTrxId');
-          localStorage.removeItem('lastDepositAmount');
-        });
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        currentOrder = data.order;
+        openPaymentModal(data.payment, data.order);
+        orderModal.style.display = 'none';
+      } else {
+        alert(data.error || 'Gagal membuat pesanan');
+      }
+    } catch (error) {
+      alert(`Terjadi kesalahan: ${error.message}`);
     }
   }
   
-  // Run pending deposit check on load
-  checkPendingDeposit();
+  function openPaymentModal(payment, order) {
+    document.getElementById('paymentAmount').textContent = `Rp${order.amount}`;
+    document.getElementById('paymentId').textContent = payment.reffId;
+    document.getElementById('paymentExpiry').textContent = payment.expiredAt;
+    document.getElementById('qrImage').src = payment.qrImage;
+    document.getElementById('qrString').textContent = payment.qrString;
+    
+    paymentModal.style.display = 'block';
+    
+    // Start checking payment status
+    startPaymentCheck(payment.reffId, order);
+  }
+  
+  function startPaymentCheck(paymentId, order) {
+    // Clear any existing interval
+    clearPaymentCheck();
+    
+    // Initial check
+    checkPaymentStatus(paymentId, order);
+    
+    // Set up interval for checking every 10 seconds
+    paymentCheckInterval = setInterval(() => {
+      checkPaymentStatus(paymentId, order);
+    }, 10000);
+    
+    // Update progress bar
+    const progressBar = document.getElementById('paymentProgress');
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress += 1;
+      progressBar.style.width = `${progress}%`;
+      
+      if (progress >= 100) {
+        clearInterval(progressInterval);
+      }
+    }, 600); // 60 seconds total for 100% (matches payment expiry)
+  }
+  
+  function clearPaymentCheck() {
+    if (paymentCheckInterval) {
+      clearInterval(paymentCheckInterval);
+      paymentCheckInterval = null;
+    }
+  }
+  
+  async function checkPaymentStatus(paymentId, order) {
+    try {
+      const response = await fetch('/api/check-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          paymentId: paymentId,
+          orderData: order
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        document.getElementById('paymentStatus').textContent = 'Pembayaran berhasil! Pesanan sedang diproses.';
+        document.getElementById('paymentStatus').style.color = 'var(--success-color)';
+        document.getElementById('checkPayment').style.display = 'none';
+        clearPaymentCheck();
+        
+        // Add to orders list
+        loadOrders();
+      } else if (data.status === 'pending') {
+        document.getElementById('paymentStatus').textContent = 'Menunggu pembayaran...';
+        document.getElementById('paymentStatus').style.color = 'var(--warning-color)';
+      } else {
+        document.getElementById('paymentStatus').textContent = data.message || 'Pembayaran gagal atau kadaluarsa';
+        document.getElementById('paymentStatus').style.color = 'var(--danger-color)';
+        clearPaymentCheck();
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+    }
+  }
+  
+  // Manual check payment button
+  document.getElementById('checkPayment').addEventListener('click', function() {
+    if (currentOrder) {
+      checkPaymentStatus(currentOrder.reffId, currentOrder);
+    }
+  });
+  
+  async function loadOrders() {
+    const apiKey = localStorage.getItem('smmPanelApiKey');
+    if (!apiKey) return;
+    
+    ordersList.innerHTML = '<div class="loading">Memuat pesanan...</div>';
+    
+    try {
+      // In a real app, you would fetch orders from your backend
+      // For this demo, we'll just show a message
+      ordersList.innerHTML = `
+        <div class="order-item">
+          <div class="order-info">
+            <div class="order-id">ID: ${currentOrder?.reffId || 'N/A'}</div>
+            <div class="order-service">Layanan: ${currentService?.name || 'N/A'}</div>
+          </div>
+          <div class="order-status status-pending">Pending</div>
+        </div>
+      `;
+    } catch (error) {
+      ordersList.innerHTML = `<div class="error">Terjadi kesalahan: ${error.message}</div>`;
+    }
+  }
+  
+  async function loadBalance() {
+    const apiKey = localStorage.getItem('smmPanelApiKey');
+    if (!apiKey) return;
+    
+    balanceInfo.innerHTML = '<div class="loading">Memuat saldo...</div>';
+    
+    try {
+      const response = await fetch('/api/balance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ key: apiKey })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        balanceInfo.innerHTML = `
+          <div class="balance-amount">${data.balance} ${data.currency}</div>
+          <div class="balance-currency">Saldo tersedia</div>
+        `;
+      } else {
+        balanceInfo.innerHTML = `<div class="error">${data.error || 'Gagal memuat saldo'}</div>`;
+      }
+    } catch (error) {
+      balanceInfo.innerHTML = `<div class="error">Terjadi kesalahan: ${error.message}</div>`;
+    }
+  }
 });

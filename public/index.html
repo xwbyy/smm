@@ -3,137 +3,119 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel SMM Profesional</title>
+  <title>SMM Panel Professional</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <div class="logo">
-        <h1>SMM<span>Panel</span></h1>
-        <p>Layanan Pemasaran Media Sosial Profesional</p>
-      </div>
-      <div class="user-info">
-        <div class="balance">
-          <span id="balance-amount">Memuat...</span>
-          <button id="refresh-balance"><i class="fas fa-sync-alt"></i></button>
-        </div>
+      <h1>SMM Panel Professional</h1>
+      <div class="api-key-input">
+        <input type="password" id="apiKey" placeholder="Masukkan API Key Anda">
+        <button id="saveKey">Simpan</button>
       </div>
     </header>
 
-    <nav>
-      <ul>
-        <li class="active" data-tab="services"><i class="fas fa-list"></i> Layanan</li>
-        <li data-tab="orders"><i class="fas fa-tasks"></i> Pesanan Saya</li>
-        <li data-tab="new-order"><i class="fas fa-plus-circle"></i> Pesan Baru</li>
-        <li data-tab="deposit"><i class="fas fa-wallet"></i> Deposit</li>
-      </ul>
-    </nav>
-
-    <main>
-      <div id="services" class="tab-content active">
-        <h2>Layanan Kami</h2>
-        <div class="search-filter">
-          <input type="text" id="service-search" placeholder="Cari layanan...">
-          <select id="category-filter">
-            <option value="">Semua Kategori</option>
-          </select>
+    <div class="panel">
+      <div class="sidebar">
+        <div class="menu-item active" data-tab="services">
+          <i class="fas fa-list"></i> Layanan
         </div>
-        <div class="services-list" id="services-list">
-          <div class="loading">Memuat layanan...</div>
+        <div class="menu-item" data-tab="orders">
+          <i class="fas fa-tasks"></i> Pesanan
+        </div>
+        <div class="menu-item" data-tab="balance">
+          <i class="fas fa-wallet"></i> Saldo
         </div>
       </div>
 
-      <div id="orders" class="tab-content">
-        <h2>Pesanan Saya</h2>
-        <div class="order-filters">
-          <select id="order-status-filter">
-            <option value="all">Semua Status</option>
-            <option value="In progress">Dalam Proses</option>
-            <option value="Completed">Selesai</option>
-            <option value="Partial">Sebagian</option>
-            <option value="Cancelled">Dibatalkan</option>
-          </select>
-          <button id="refresh-orders"><i class="fas fa-sync-alt"></i> Segarkan</button>
-        </div>
-        <div class="orders-list" id="orders-list">
-          <div class="loading">Memuat pesanan...</div>
-        </div>
-      </div>
-
-      <div id="new-order" class="tab-content">
-        <h2>Buat Pesanan Baru</h2>
-        <form id="order-form">
-          <div class="form-group">
-            <label for="service-select">Layanan</label>
-            <select id="service-select" required>
-              <option value="">Pilih layanan</option>
+      <div class="content">
+        <!-- Services Tab -->
+        <div id="services" class="tab-content active">
+          <h2><i class="fas fa-list"></i> Daftar Layanan</h2>
+          <div class="filter">
+            <input type="text" id="serviceSearch" placeholder="Cari layanan...">
+            <select id="categoryFilter">
+              <option value="">Semua Kategori</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="service-link">Link</label>
-            <input type="url" id="service-link" required placeholder="https://">
+          <div class="services-list" id="servicesList">
+            <div class="loading">Memuat layanan...</div>
           </div>
-          <div class="form-group">
-            <label for="service-quantity">Jumlah</label>
-            <input type="number" id="service-quantity" required>
-            <div class="quantity-range" id="quantity-range">Min: 0 - Maks: 0</div>
-          </div>
-          <div class="form-group">
-            <label for="service-runs">Jumlah Run (opsional)</label>
-            <input type="number" id="service-runs" placeholder="Biarkan kosong untuk default">
-          </div>
-          <div class="form-group">
-            <label for="service-interval">Interval dalam menit (opsional)</label>
-            <input type="number" id="service-interval" placeholder="Biarkan kosong untuk default">
-          </div>
-          <div class="form-group">
-            <div class="price-calculator">
-              <span>Perkiraan Harga: </span>
-              <span id="estimated-price">Rp0</span>
-            </div>
-          </div>
-          <button type="submit" class="submit-btn">Pesan Sekarang</button>
-        </form>
-      </div>
-
-      <div id="deposit" class="tab-content">
-        <h2>Deposit Saldo</h2>
-        <div class="deposit-form">
-          <div class="form-group">
-            <label for="deposit-amount">Jumlah Deposit (Minimal Rp10,000)</label>
-            <input type="number" id="deposit-amount" min="10000" value="10000">
-          </div>
-          <button id="create-deposit" class="submit-btn">Buat Deposit</button>
         </div>
-        <div id="payment-info" style="display: none;">
-          <h3>Instruksi Pembayaran</h3>
-          <div id="qr-code-container"></div>
-          <div id="payment-details"></div>
-          <button id="check-payment" class="submit-btn">Cek Status Pembayaran</button>
-        </div>
-      </div>
-    </main>
 
-    <div class="modal" id="order-modal">
-      <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>Detail Pesanan</h2>
-        <div id="order-details"></div>
+        <!-- Orders Tab -->
+        <div id="orders" class="tab-content">
+          <h2><i class="fas fa-tasks"></i> Pesanan Anda</h2>
+          <div class="orders-list" id="ordersList">
+            <div class="empty">Belum ada pesanan. Silakan buat pesanan baru dari tab Layanan.</div>
+          </div>
+        </div>
+
+        <!-- Balance Tab -->
+        <div id="balance" class="tab-content">
+          <h2><i class="fas fa-wallet"></i> Saldo Anda</h2>
+          <div class="balance-info" id="balanceInfo">
+            <div class="loading">Memuat informasi saldo...</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <footer>
-      <p>&copy; 2023 Panel SMM Profesional. Semua hak dilindungi.</p>
-      <div class="footer-links">
-        <a href="#">Syarat Layanan</a>
-        <a href="#">Kebijakan Privasi</a>
-        <a href="#">Bantuan</a>
+    <!-- Order Modal -->
+    <div id="orderModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Buat Pesanan Baru</h2>
+        <div class="service-info" id="serviceInfo"></div>
+        <form id="orderForm">
+          <div class="form-group">
+            <label for="targetLink">Link Target:</label>
+            <input type="text" id="targetLink" required placeholder="https://example.com">
+          </div>
+          <div class="form-group">
+            <label for="quantity">Jumlah:</label>
+            <div class="quantity-control">
+              <input type="number" id="quantity" min="1" required>
+              <div class="quantity-info">Min: <span id="minQuantity">0</span>, Max: <span id="maxQuantity">0</span></div>
+            </div>
+          </div>
+          <div class="price-info">
+            <div>Harga per 1000: <span id="rate">0</span></div>
+            <div>Total Harga: <span id="totalPrice">0</span></div>
+          </div>
+          <button type="submit" class="btn-order">Bayar Sekarang</button>
+        </form>
       </div>
-    </footer>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Pembayaran</h2>
+        <div class="payment-info">
+          <div class="payment-amount">Total: <span id="paymentAmount">0</span></div>
+          <div class="payment-id">ID Transaksi: <span id="paymentId">-</span></div>
+          <div class="payment-expiry">Batas Waktu: <span id="paymentExpiry">-</span></div>
+        </div>
+        <div class="qr-container">
+          <img id="qrImage" src="" alt="QR Code Pembayaran">
+          <div class="qr-string" id="qrString"></div>
+        </div>
+        <div class="payment-status">
+          <div id="paymentStatus">Menunggu pembayaran...</div>
+          <div class="progress-bar">
+            <div id="paymentProgress"></div>
+          </div>
+        </div>
+        <button id="checkPayment" class="btn-check">Cek Status Pembayaran</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
+  <script src="payment.js"></script>
 </body>
 </html>
