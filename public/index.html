@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMM Panel dengan QRIS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>SMM Panel</h1>
+      <p>Layanan SMM dengan pembayaran QRIS</p>
+    </header>
+    
+    <main>
+      <div class="order-form">
+        <h2>Buat Order Baru</h2>
+        <form id="orderForm">
+          <div class="form-group">
+            <label for="service">Layanan:</label>
+            <select id="service" required>
+              <option value="">Pilih Layanan</option>
+              <option value="1">Followers Instagram</option>
+              <option value="2">Likes Instagram</option>
+              <option value="3">Views YouTube</option>
+              <option value="4">Subscribers YouTube</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="link">Link Target:</label>
+            <input type="url" id="link" placeholder="https://example.com" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="quantity">Jumlah:</label>
+            <input type="number" id="quantity" min="10" required>
+          </div>
+          
+          <div class="form-group">
+            <button type="submit">Buat Order</button>
+          </div>
+        </form>
+      </div>
+      
+      <div class="payment-section hidden" id="paymentSection">
+        <h2>Pembayaran</h2>
+        <div class="order-summary">
+          <h3>Ringkasan Order</h3>
+          <p><strong>Layanan:</strong> <span id="serviceName">-</span></p>
+          <p><strong>Link Target:</strong> <span id="targetLink">-</span></p>
+          <p><strong>Jumlah:</strong> <span id="orderQuantity">-</span></p>
+          <p><strong>Total Harga:</strong> Rp<span id="totalPrice">0</span></p>
+        </div>
+        
+        <div class="qris-payment">
+          <h3>Bayar dengan QRIS</h3>
+          <div id="qrisImageContainer">
+            <img id="qrisImage" src="" alt="QR Code Pembayaran">
+          </div>
+          <p>Scan QR code di atas untuk melakukan pembayaran</p>
+          <p><strong>ID Transaksi:</strong> <span id="paymentId">-</span></p>
+          <p><strong>Batas Waktu:</strong> <span id="paymentExpiry">-</span></p>
+          
+          <div class="payment-status">
+            <p>Status: <span id="paymentStatus">Menunggu Pembayaran</span></p>
+            <button id="checkPaymentBtn">Cek Status Pembayaran</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="order-status hidden" id="orderStatusSection">
+        <h2>Status Order</h2>
+        <div class="status-info">
+          <p><strong>ID Order:</strong> <span id="orderIdDisplay">-</span></p>
+          <p><strong>Status:</strong> <span id="orderStatus">-</span></p>
+          <p><strong>Tanggal:</strong> <span id="orderDate">-</span></p>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script src="app.js"></script>
+  <script src="payment.js"></script>
+</body>
+</html>
