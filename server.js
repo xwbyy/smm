@@ -2,239 +2,240 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
+const qr = require('qr-image');
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Konfigurasi API
-const INDO_SMM_API = 'https://indosmm.id/api/v2';
-const INDO_SMM_KEY = '4e59a83d29629d875f9eaa48134d630d';
-const HIAY_API_KEY = 'Fupei-pedia-l3p5q04yqvppzw22';
-const HIAY_API_URL = 'https://fupei-pedia.web.id/api/v1/deposit';
-
 // Middleware
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
+app.use(express.static(path.join(__dirname, 'public'), {
+  extensions: ['html']
+}));
 
-// Variabel penyimpanan sementara (tanpa database)
-const storage = {
-  orders: [],
-  payments: {},
-  services: []
+// Konfigurasi API
+const INDO_SMM_API = {
+  key: '4e59a83d29629d875f9eaa48134d630d',
+  url: 'https://indosmm.id/api/v2'
 };
 
-// Fungsi untuk mendapatkan layanan dari Indo SMM
-async function fetchServices() {
+const PAYMENT_API = {
+  key: 'Fupei-pedia-l3p5q04yqvppzw22',
+  url: 'https://fupei-pedia.web.id/api/v1/deposit'
+};
+
+// Markup harga (dalam persen)
+const PRICE_MARKUP = 20; // 20% markup
+
+// Simpan data sementara di memory
+const orders = {};
+const payments = {};
+const servicesCache = {
+  data: null,
+  lastUpdated: null
+};
+
+// Endpoint untuk layanan SMM
+app.get('/api/services', async (req, res) => {
   try {
-    const response = await axios.post(INDO_SMM_API, {
-      key: INDO_SMM_KEY,
-      action: 'services'
-    });
-    
-    if (response.data && Array.isArray(response.data)) {
-      storage.services = response.data;
-      console.log('Daftar layanan berhasil diperbarui');
+    // Gunakan cache jika tersedia dan belum kadaluarsa (5 menit)
+    if (servicesCache.data && Date.now() - servicesCache.lastUpdated < 300000) {
+      return res.json(servicesCache.data);
     }
+
+    const response = await axios.get(INDO_SMM_API.url, {
+      params: {
+        key: INDO_SMM_API.key,
+        action: 'services'
+      }
+    });
+
+    // Tambahkan markup harga dan simpan ke cache
+    const servicesWithMarkup = response.data.map(service => ({
+      ...service,
+      originalRate: service.rate,
+      rate: (parseFloat(service.rate) * (1 + PRICE_MARKUP / 100)).toFixed(2)
+    }));
+
+    servicesCache.data = servicesWithMarkup;
+    servicesCache.lastUpdated = Date.now();
+
+    res.json(servicesWithMarkup);
   } catch (error) {
-    console.error('Gagal memuat layanan:', error.message);
+    console.error('Error fetching services:', error);
+    res.status(500).json({ error: 'Gagal memuat layanan' });
   }
-}
-
-// Memuat layanan saat server start
-fetchServices();
-// Perbarui layanan setiap 1 jam
-setInterval(fetchServices, 3600000);
-
-// API Endpoints
-
-// Get services
-app.get('/api/services', (req, res) => {
-  res.json({ success: true, services: storage.services });
 });
 
-// Create order
-app.post('/api/order', async (req, res) => {
+// Endpoint untuk kategori layanan
+app.get('/api/categories', async (req, res) => {
   try {
-    const { service, link, quantity } = req.body;
+    const services = servicesCache.data || (await axios.get(`${INDO_SMM_API.url}?key=${INDO_SMM_API.key}&action=services`)).data;
     
-    // Validasi
-    if (!service || !link || !quantity) {
-      return res.status(400).json({ success: false, message: 'Data tidak lengkap' });
+    const categories = [...new Set(services.map(service => service.category))];
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Gagal memuat kategori' });
+  }
+});
+
+// Endpoint untuk membuat pesanan
+app.post('/api/order', async (req, res) => {
+  const { serviceId, link, quantity } = req.body;
+
+  try {
+    // Dapatkan detail layanan untuk memverifikasi
+    const service = servicesCache.data.find(s => s.service == serviceId);
+    if (!service) {
+      return res.status(400).json({ error: 'Layanan tidak ditemukan' });
     }
-    
-    // Cari layanan
-    const selectedService = storage.services.find(s => s.service == service);
-    if (!selectedService) {
-      return res.status(400).json({ success: false, message: 'Layanan tidak ditemukan' });
-    }
-    
-    // Validasi quantity
-    const qty = parseInt(quantity);
-    if (qty < selectedService.min || qty > selectedService.max) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Jumlah harus antara ${selectedService.min} - ${selectedService.max}` 
-      });
-    }
-    
-    // Hitung harga (dengan markup 10%)
-    const rate = parseFloat(selectedService.rate);
-    const price = Math.ceil((rate * qty / 1000) * 1.1; // Markup 10%
-    
-    // Buat order
-    const orderId = Date.now();
-    const order = {
-      id: orderId,
-      serviceId: service,
-      serviceName: selectedService.name,
+
+    // Buat pesanan ke Indo SMM
+    const orderResponse = await axios.get(INDO_SMM_API.url, {
+      params: {
+        key: INDO_SMM_API.key,
+        action: 'add',
+        service: serviceId,
+        link,
+        quantity
+      }
+    });
+
+    const orderId = orderResponse.data.order;
+    const totalPrice = (service.rate * quantity).toFixed(2);
+
+    // Simpan order sementara
+    orders[orderId] = {
+      serviceId,
+      serviceName: service.name,
       link,
-      quantity: qty,
-      price,
+      quantity,
+      price: totalPrice,
       status: 'pending_payment',
       createdAt: new Date()
     };
-    
-    storage.orders.push(order);
-    
+
     res.json({ 
       success: true, 
       orderId,
-      price,
-      message: 'Order berhasil dibuat, silakan lakukan pembayaran' 
+      amount: totalPrice,
+      serviceName: service.name
     });
-    
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: 'Gagal membuat pesanan' });
   }
 });
 
-// Create payment
+// Endpoint untuk pembayaran QRIS
 app.post('/api/create-payment', async (req, res) => {
+  const { orderId, amount } = req.body;
+
   try {
-    const { orderId, amount } = req.body;
-    
-    // Validasi order
-    const order = storage.orders.find(o => o.id == orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order tidak ditemukan' });
+    // Verifikasi order
+    if (!orders[orderId]) {
+      return res.status(404).json({ error: 'Pesanan tidak ditemukan' });
     }
-    
-    // Buat pembayaran via Hiay
-    const response = await axios.get(`${HIAY_API_URL}/create`, {
+
+    // Buat pembayaran ke Hiay Payment
+    const paymentResponse = await axios.get(`${PAYMENT_API.url}/create`, {
       params: {
         nominal: amount,
-        apikey: HIAY_API_KEY
+        apikey: PAYMENT_API.key
       },
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+      headers: {
+        'User-Agent': 'Mozilla/5.0'
+      }
     });
-    
-    if (!response.data.success) {
-      return res.status(400).json({
-        success: false,
-        message: response.data.message || 'Gagal membuat pembayaran'
-      });
+
+    if (!paymentResponse.data.success) {
+      return res.status(400).json({ error: paymentResponse.data.message || 'Gagal membuat pembayaran' });
     }
-    
-    const paymentData = response.data.data;
-    
+
+    const paymentData = paymentResponse.data.data;
+    const qrImage = qr.imageSync(paymentData.qr_string, { type: 'png' });
+
     // Simpan data pembayaran
-    storage.payments[orderId] = {
+    payments[paymentData.reff_id] = {
+      orderId,
       paymentId: paymentData.id,
-      reffId: paymentData.reff_id,
       amount: paymentData.nominal,
       qrString: paymentData.qr_string,
       expiredAt: paymentData.expired_at,
       status: 'pending'
     };
-    
+
     res.json({
       success: true,
-      qrImageUrl: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentData.qr_string)}`,
-      paymentData: {
-        reffId: paymentData.reff_id,
-        amount: paymentData.nominal,
-        expiredAt: paymentData.expired_at
-      }
+      paymentId: paymentData.reff_id,
+      qrImage: `data:image/png;base64,${qrImage.toString('base64')}`,
+      qrString: paymentData.qr_string,
+      amount: paymentData.nominal,
+      expiredAt: paymentData.expired_at
     });
-    
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ success: false, message: 'Gagal membuat pembayaran' });
+    console.error('Error creating payment:', error);
+    res.status(500).json({ error: 'Gagal membuat pembayaran' });
   }
 });
 
-// Check payment status
-app.get('/api/check-payment/:orderId', async (req, res) => {
+// Endpoint untuk cek status pembayaran
+app.get('/api/check-payment/:paymentId', async (req, res) => {
+  const { paymentId } = req.params;
+
   try {
-    const { orderId } = req.params;
-    const payment = storage.payments[orderId];
-    
-    if (!payment) {
-      return res.status(404).json({ success: false, message: 'Pembayaran tidak ditemukan' });
-    }
-    
-    // Cek status di Hiay
-    const response = await axios.get(`${HIAY_API_URL}/status`, {
-      params: {
-        trxid: payment.paymentId,
-        apikey: HIAY_API_KEY
-      },
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    
-    if (response.data.success && response.data.data.status === 'success') {
-      // Update status pembayaran
-      payment.status = 'paid';
-      
-      // Update status order
-      const order = storage.orders.find(o => o.id == orderId);
-      if (order) {
-        order.status = 'processing';
-        
-        // Proses order ke Indo SMM
-        try {
-          const smmResponse = await axios.post(INDO_SMM_API, {
-            key: INDO_SMM_KEY,
-            action: 'add',
-            service: order.serviceId,
-            link: order.link,
-            quantity: order.quantity
-          });
-          
-          if (smmResponse.data.order) {
-            order.status = 'completed';
-            order.smmOrderId = smmResponse.data.order;
-            order.completedAt = new Date();
-          }
-        } catch (smmError) {
-          console.error('Gagal memproses ke Indo SMM:', smmError.message);
-          order.status = 'failed';
-          order.error = smmError.message;
-        }
-      }
-      
-      return res.json({
-        success: true,
-        paid: true,
-        orderStatus: order?.status || 'unknown'
+    // Cek di local storage dulu
+    if (payments[paymentId] && payments[paymentId].status === 'paid') {
+      return res.json({ 
+        success: true, 
+        status: 'paid',
+        orderId: payments[paymentId].orderId
       });
     }
-    
-    res.json({
-      success: true,
-      paid: false,
-      paymentStatus: payment.status
+
+    // Cek ke payment gateway
+    const statusResponse = await axios.get(`${PAYMENT_API.url}/status`, {
+      params: {
+        trxid: payments[paymentId]?.paymentId,
+        apikey: PAYMENT_API.key
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0'
+      }
     });
-    
+
+    if (statusResponse.data.success && statusResponse.data.data.status === 'success') {
+      // Update status pembayaran
+      payments[paymentId].status = 'paid';
+      
+      // Update status order
+      const orderId = payments[paymentId].orderId;
+      if (orders[orderId]) {
+        orders[orderId].status = 'processing';
+      }
+
+      return res.json({ 
+        success: true, 
+        status: 'paid',
+        orderId
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      status: payments[paymentId]?.status || 'pending'
+    });
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ success: false, message: 'Gagal memeriksa pembayaran' });
+    console.error('Error checking payment:', error);
+    res.status(500).json({ error: 'Gagal memeriksa status pembayaran' });
   }
 });
 
-// Route lainnya
+// Middleware untuk halaman HTML
 app.use((req, res, next) => {
   if (path.extname(req.path) === '') {
     const htmlPath = path.join(__dirname, 'public', req.path + '.html');
@@ -242,9 +243,12 @@ app.use((req, res, next) => {
       if (!err) res.sendFile(htmlPath);
       else next();
     });
-  } else next();
+  } else {
+    next();
+  }
 });
 
+// Default route
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
