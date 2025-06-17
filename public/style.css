@@ -1,4 +1,4 @@
-/* Reset CSS */
+/* Reset dan Base Styles */
 * {
   margin: 0;
   padding: 0;
@@ -7,24 +7,28 @@
 }
 
 body {
-  background-color: #f5f5f5;
+  background-color: #f5f7fa;
   color: #333;
   line-height: 1.6;
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 header {
   text-align: center;
   margin-bottom: 30px;
-  padding: 20px 0;
-  background-color: #4a6baf;
+  padding: 25px 0;
+  background: linear-gradient(135deg, #4a6baf 0%, #3a5a9f 100%);
   color: white;
-  border-radius: 8px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 header h1 {
@@ -32,118 +36,243 @@ header h1 {
   margin-bottom: 10px;
 }
 
-.panel {
-  background-color: white;
-  border-radius: 8px;
-  padding: 30px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
 }
 
-.services-section, .order-form, .payment-section {
+/* Form Styles */
+.order-form, .payment-section, .order-status {
+  background-color: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
   margin-bottom: 30px;
 }
 
-h2 {
-  font-size: 1.5rem;
-  margin-bottom: 20px;
+.order-form h2, .payment-section h2, .order-status h2 {
+  margin-bottom: 25px;
   color: #4a6baf;
-  border-bottom: 2px solid #eee;
+  font-size: 1.8rem;
+  border-bottom: 2px solid #f0f0f0;
   padding-bottom: 10px;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 
-label {
+.form-group label {
   display: block;
   margin-bottom: 8px;
+  font-weight: 600;
+  color: #555;
+}
+
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: border 0.3s;
+}
+
+.form-group input:focus, .form-group select:focus {
+  border-color: #4a6baf;
+  outline: none;
+}
+
+.form-group button {
+  background: linear-gradient(135deg, #4a6baf 0%, #3a5a9f 100%);
+  color: white;
+  border: none;
+  padding: 14px 25px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.form-group button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(74, 107, 175, 0.3);
+}
+
+.form-group button:active {
+  transform: translateY(0);
+}
+
+#quantityInfo {
+  display: block;
+  margin-top: 5px;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Price Summary */
+.price-summary {
+  background-color: #f9fafc;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+  border: 1px solid #e0e6ed;
+}
+
+.price-summary h3 {
+  margin-bottom: 15px;
+  color: #4a6baf;
+  font-size: 1.2rem;
+}
+
+.price-summary p {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+#confirmOrderBtn {
+  margin-top: 15px;
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+}
+
+/* Payment Section */
+.order-info, .payment-info {
+  background-color: #f9fafc;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  border: 1px solid #e0e6ed;
+}
+
+.order-info h3, .payment-info h3 {
+  margin-bottom: 15px;
+  color: #4a6baf;
+  font-size: 1.2rem;
+}
+
+.order-info p, .payment-info p {
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.order-info p strong, .payment-info p strong {
+  color: #555;
+}
+
+.qris-payment {
+  text-align: center;
+}
+
+#qrisContainer {
+  margin: 20px auto;
+  padding: 15px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+#qrisImage {
+  width: 250px;
+  height: 250px;
+}
+
+#checkPaymentBtn {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+/* Order Status */
+.status-card {
+  background-color: #f9fafc;
+  padding: 25px;
+  border-radius: 8px;
+  border: 1px solid #e0e6ed;
+}
+
+.status-card h3 {
+  margin-bottom: 20px;
+  color: #4a6baf;
+  font-size: 1.4rem;
+}
+
+.status-card p {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.status-card p strong {
+  color: #555;
+}
+
+#orderSuccessMessage {
+  margin-top: 25px;
+  padding: 15px;
+  background-color: #e6f7ee;
+  border-radius: 6px;
+  border-left: 4px solid #28a745;
+}
+
+/* Status Colors */
+#paymentStatus, #displayOrderStatus {
   font-weight: bold;
 }
 
-input, select, textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
+.pending {
+  color: #ffc107;
 }
 
-button {
-  background-color: #4a6baf;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s;
+.paid {
+  color: #17a2b8;
 }
 
-button:hover {
-  background-color: #3a5a9f;
+.processing {
+  color: #007bff;
 }
 
-#qris-container {
-  text-align: center;
-  margin: 20px 0;
+.completed {
+  color: #28a745;
 }
 
-#qris-image {
-  max-width: 300px;
-  height: auto;
-  margin: 0 auto 20px;
-  border: 1px solid #ddd;
-  padding: 10px;
-  background-color: white;
+.failed {
+  color: #dc3545;
 }
 
-#qris-string {
-  width: 100%;
-  min-height: 100px;
-  margin: 10px 0;
-  font-family: monospace;
-}
-
-.service-details {
-  background-color: #f9f9f9;
-  padding: 15px;
-  border-radius: 4px;
-  margin-top: 15px;
-}
-
-.service-details p {
-  margin-bottom: 8px;
-}
-
+/* Utility Classes */
 .hidden {
   display: none;
 }
 
-#payment-status {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f0f8ff;
-  border-radius: 4px;
-}
-
+/* Footer */
 footer {
+  margin-top: auto;
   text-align: center;
-  margin-top: 30px;
-  padding: 20px 0;
+  padding: 20px;
   color: #666;
+  font-size: 0.9rem;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
   .container {
-    padding: 10px;
+    padding: 15px;
   }
   
   header h1 {
     font-size: 2rem;
   }
   
-  #qris-image {
-    max-width: 200px;
+  .order-form, .payment-section, .order-status {
+    padding: 20px;
+  }
+  
+  #qrisImage {
+    width: 200px;
+    height: 200px;
   }
 }
