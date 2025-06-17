@@ -187,6 +187,13 @@ h2 {
 
 .service-card .service-minmax {
   color: #777;
+  margin-bottom: 10px;
+}
+
+.service-card .service-desc {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 15px;
 }
 
 .service-card .service-actions {
@@ -313,24 +320,6 @@ h2 {
   font-size: 12px;
 }
 
-.refill-btn {
-  background-color: var(--secondary-color);
-  color: white;
-}
-
-.refill-btn:hover {
-  background-color: #27ae60;
-}
-
-.cancel-btn {
-  background-color: var(--danger-color);
-  color: white;
-}
-
-.cancel-btn:hover {
-  background-color: #c0392b;
-}
-
 .details-btn {
   background-color: var(--primary-color);
   color: white;
@@ -340,7 +329,7 @@ h2 {
   background-color: #2980b9;
 }
 
-#order-form, .deposit-form {
+#order-form {
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -390,113 +379,28 @@ h2 {
 }
 
 .deposit-form {
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 20px;
-  background-color: white;
-  border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
-}
-
-.payment-info {
-  margin-top: 30px;
   background-color: white;
   padding: 20px;
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
-}
-
-.payment-details {
-  display: flex;
-  gap: 30px;
   margin-bottom: 20px;
-  align-items: center;
 }
 
-.qr-code-container {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: var(--border-radius);
-}
-
-.qr-code-container img {
-  width: 200px;
-  height: 200px;
-  display: block;
-}
-
-.payment-meta {
-  flex: 1;
-}
-
-.payment-meta p {
-  margin-bottom: 10px;
-}
-
-.payment-meta strong {
-  display: inline-block;
-  width: 120px;
-}
-
-.payment-instructions {
-  background-color: var(--light-color);
-  padding: 15px;
-  border-radius: var(--border-radius);
-}
-
-.payment-instructions ol {
-  padding-left: 20px;
-  margin-top: 10px;
-}
-
-.payment-history {
-  margin-top: 30px;
+#payment-info {
   background-color: white;
   padding: 20px;
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
 }
 
-.history-list {
-  margin-top: 15px;
-}
-
-.history-item {
-  padding: 15px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-}
-
-.history-item:last-child {
-  border-bottom: none;
-}
-
-.history-item .status {
-  padding: 3px 8px;
-  border-radius: var(--border-radius);
-  font-size: 12px;
-}
-
-.status-success {
-  background-color: var(--success-color);
-  color: white;
-}
-
-.status-pending {
-  background-color: var(--warning-color);
-  color: white;
-}
-
-.status-failed {
-  background-color: var(--danger-color);
-  color: white;
-}
-
-.empty {
+#qr-code-container {
   text-align: center;
-  padding: 20px;
-  color: #777;
+  margin: 15px 0;
+}
+
+#qr-code-container img {
+  max-width: 200px;
+  height: auto;
 }
 
 .modal {
@@ -563,6 +467,12 @@ footer {
   color: #777;
 }
 
+.error {
+  color: var(--danger-color);
+  padding: 20px;
+  text-align: center;
+}
+
 /* Responsive styles */
 @media (max-width: 768px) {
   header {
@@ -596,10 +506,6 @@ footer {
   
   .order-actions {
     align-self: flex-end;
-  }
-  
-  .payment-details {
-    flex-direction: column;
   }
 }
 

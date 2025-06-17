@@ -50,10 +50,10 @@
         <div class="order-filters">
           <select id="order-status-filter">
             <option value="all">Semua Status</option>
-            <option value="Dalam proses">Dalam Proses</option>
-            <option value="Selesai">Selesai</option>
-            <option value="Sebagian">Sebagian</option>
-            <option value="Dibatalkan">Dibatalkan</option>
+            <option value="In progress">Dalam Proses</option>
+            <option value="Completed">Selesai</option>
+            <option value="Partial">Sebagian</option>
+            <option value="Cancelled">Dibatalkan</option>
           </select>
           <button id="refresh-orders"><i class="fas fa-sync-alt"></i> Segarkan</button>
         </div>
@@ -82,11 +82,11 @@
           </div>
           <div class="form-group">
             <label for="service-runs">Jumlah Run (opsional)</label>
-            <input type="number" id="service-runs" placeholder="Kosongkan untuk default">
+            <input type="number" id="service-runs" placeholder="Biarkan kosong untuk default">
           </div>
           <div class="form-group">
             <label for="service-interval">Interval dalam menit (opsional)</label>
-            <input type="number" id="service-interval" placeholder="Kosongkan untuk default">
+            <input type="number" id="service-interval" placeholder="Biarkan kosong untuk default">
           </div>
           <div class="form-group">
             <div class="price-calculator">
@@ -94,7 +94,7 @@
               <span id="estimated-price">Rp0</span>
             </div>
           </div>
-          <button type="submit" class="submit-btn">Buat Pesanan</button>
+          <button type="submit" class="submit-btn">Pesan Sekarang</button>
         </form>
       </div>
 
@@ -105,37 +105,13 @@
             <label for="deposit-amount">Jumlah Deposit (Minimal Rp10,000)</label>
             <input type="number" id="deposit-amount" min="10000" value="10000">
           </div>
-          <button id="deposit-btn" class="submit-btn">Buat Pembayaran</button>
+          <button id="create-deposit" class="submit-btn">Buat Deposit</button>
         </div>
-        <div id="payment-info" class="payment-info" style="display: none;">
+        <div id="payment-info" style="display: none;">
           <h3>Instruksi Pembayaran</h3>
-          <div class="payment-details">
-            <div class="qr-code-container">
-              <img id="qr-code-img" src="" alt="QR Code Pembayaran">
-            </div>
-            <div class="payment-meta">
-              <p><strong>ID Transaksi:</strong> <span id="trx-id"></span></p>
-              <p><strong>Jumlah Deposit:</strong> <span id="trx-amount"></span></p>
-              <p><strong>Biaya Admin:</strong> <span id="trx-fee"></span></p>
-              <p><strong>Saldo Diterima:</strong> <span id="trx-received"></span></p>
-              <p><strong>Batas Waktu:</strong> <span id="trx-expiry"></span></p>
-              <button id="check-status" class="action-btn">Cek Status Pembayaran</button>
-            </div>
-          </div>
-          <div class="payment-instructions">
-            <h4>Cara Pembayaran:</h4>
-            <ol>
-              <li>Scan QR Code di atas menggunakan aplikasi mobile banking/e-wallet Anda</li>
-              <li>Atau gunakan QR string berikut: <code id="qr-string"></code></li>
-              <li>Saldo akan otomatis ditambahkan setelah pembayaran berhasil</li>
-            </ol>
-          </div>
-        </div>
-        <div id="payment-history" class="payment-history">
-          <h3>Riwayat Transaksi</h3>
-          <div class="history-list" id="history-list">
-            <div class="empty">Belum ada transaksi</div>
-          </div>
+          <div id="qr-code-container"></div>
+          <div id="payment-details"></div>
+          <button id="check-payment" class="submit-btn">Cek Status Pembayaran</button>
         </div>
       </div>
     </main>
@@ -148,16 +124,8 @@
       </div>
     </div>
 
-    <div class="modal" id="payment-modal">
-      <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>Status Pembayaran</h2>
-        <div id="payment-status"></div>
-      </div>
-    </div>
-
     <footer>
-      <p>&copy; 2023 Panel SMM Profesional. Hak cipta dilindungi.</p>
+      <p>&copy; 2023 Panel SMM Profesional. Semua hak dilindungi.</p>
       <div class="footer-links">
         <a href="#">Syarat Layanan</a>
         <a href="#">Kebijakan Privasi</a>
