@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Professional SMM Panel</title>
+  <title>Panel SMM Profesional</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -12,67 +12,63 @@
     <header>
       <div class="logo">
         <h1>SMM<span>Panel</span></h1>
-        <p>Professional Social Media Marketing</p>
+        <p>Layanan Pemasaran Media Sosial Profesional</p>
       </div>
       <div class="user-info">
         <div class="balance">
-          <span id="balance-amount">Loading...</span>
+          <span id="balance-amount">Memuat...</span>
           <button id="refresh-balance"><i class="fas fa-sync-alt"></i></button>
-        </div>
-        <div class="api-key-input">
-          <input type="password" id="api-key" placeholder="Enter your API key">
-          <button id="save-key">Save</button>
         </div>
       </div>
     </header>
 
     <nav>
       <ul>
-        <li class="active" data-tab="services"><i class="fas fa-list"></i> Services</li>
-        <li data-tab="orders"><i class="fas fa-tasks"></i> My Orders</li>
-        <li data-tab="new-order"><i class="fas fa-plus-circle"></i> New Order</li>
-        <li data-tab="payment"><i class="fas fa-wallet"></i> Payment</li>
+        <li class="active" data-tab="services"><i class="fas fa-list"></i> Layanan</li>
+        <li data-tab="orders"><i class="fas fa-tasks"></i> Pesanan Saya</li>
+        <li data-tab="new-order"><i class="fas fa-plus-circle"></i> Pesan Baru</li>
+        <li data-tab="deposit"><i class="fas fa-wallet"></i> Deposit</li>
       </ul>
     </nav>
 
     <main>
       <div id="services" class="tab-content active">
-        <h2>Our Services</h2>
+        <h2>Layanan Kami</h2>
         <div class="search-filter">
-          <input type="text" id="service-search" placeholder="Search services...">
+          <input type="text" id="service-search" placeholder="Cari layanan...">
           <select id="category-filter">
-            <option value="">All Categories</option>
+            <option value="">Semua Kategori</option>
           </select>
         </div>
         <div class="services-list" id="services-list">
-          <div class="loading">Loading services...</div>
+          <div class="loading">Memuat layanan...</div>
         </div>
       </div>
 
       <div id="orders" class="tab-content">
-        <h2>My Orders</h2>
+        <h2>Pesanan Saya</h2>
         <div class="order-filters">
           <select id="order-status-filter">
-            <option value="all">All Statuses</option>
-            <option value="In progress">In Progress</option>
-            <option value="Completed">Completed</option>
-            <option value="Partial">Partial</option>
-            <option value="Cancelled">Cancelled</option>
+            <option value="all">Semua Status</option>
+            <option value="Dalam proses">Dalam Proses</option>
+            <option value="Selesai">Selesai</option>
+            <option value="Sebagian">Sebagian</option>
+            <option value="Dibatalkan">Dibatalkan</option>
           </select>
-          <button id="refresh-orders"><i class="fas fa-sync-alt"></i> Refresh</button>
+          <button id="refresh-orders"><i class="fas fa-sync-alt"></i> Segarkan</button>
         </div>
         <div class="orders-list" id="orders-list">
-          <div class="loading">Loading orders...</div>
+          <div class="loading">Memuat pesanan...</div>
         </div>
       </div>
 
       <div id="new-order" class="tab-content">
-        <h2>Create New Order</h2>
+        <h2>Buat Pesanan Baru</h2>
         <form id="order-form">
           <div class="form-group">
-            <label for="service-select">Service</label>
+            <label for="service-select">Layanan</label>
             <select id="service-select" required>
-              <option value="">Select a service</option>
+              <option value="">Pilih layanan</option>
             </select>
           </div>
           <div class="form-group">
@@ -80,58 +76,66 @@
             <input type="url" id="service-link" required placeholder="https://">
           </div>
           <div class="form-group">
-            <label for="service-quantity">Quantity</label>
+            <label for="service-quantity">Jumlah</label>
             <input type="number" id="service-quantity" required>
-            <div class="quantity-range" id="quantity-range">Min: 0 - Max: 0</div>
+            <div class="quantity-range" id="quantity-range">Min: 0 - Maks: 0</div>
           </div>
           <div class="form-group">
-            <label for="service-runs">Runs (optional)</label>
-            <input type="number" id="service-runs" placeholder="Leave empty for default">
+            <label for="service-runs">Jumlah Run (opsional)</label>
+            <input type="number" id="service-runs" placeholder="Kosongkan untuk default">
           </div>
           <div class="form-group">
-            <label for="service-interval">Interval in minutes (optional)</label>
-            <input type="number" id="service-interval" placeholder="Leave empty for default">
+            <label for="service-interval">Interval dalam menit (opsional)</label>
+            <input type="number" id="service-interval" placeholder="Kosongkan untuk default">
           </div>
           <div class="form-group">
             <div class="price-calculator">
-              <span>Estimated Price: </span>
-              <span id="estimated-price">$0.00</span>
+              <span>Perkiraan Harga: </span>
+              <span id="estimated-price">Rp0</span>
             </div>
           </div>
-          <button type="submit" class="submit-btn">Place Order</button>
+          <button type="submit" class="submit-btn">Buat Pesanan</button>
         </form>
       </div>
 
-      <div id="payment" class="tab-content">
-        <h2>Payment Methods</h2>
-        <div class="payment-methods">
-          <div class="payment-method">
-            <h3><i class="fab fa-bitcoin"></i> Bitcoin</h3>
-            <p>Send BTC to this address:</p>
-            <div class="payment-address">1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa</div>
-            <p>Minimum deposit: $10</p>
+      <div id="deposit" class="tab-content">
+        <h2>Deposit Saldo</h2>
+        <div class="deposit-form">
+          <div class="form-group">
+            <label for="deposit-amount">Jumlah Deposit (Minimal Rp10,000)</label>
+            <input type="number" id="deposit-amount" min="10000" value="10000">
           </div>
-          <div class="payment-method">
-            <h3><i class="fas fa-money-bill-wave"></i> Perfect Money</h3>
-            <p>Send PM to this account:</p>
-            <div class="payment-address">U1234567</div>
-            <p>Minimum deposit: $10</p>
+          <button id="deposit-btn" class="submit-btn">Buat Pembayaran</button>
+        </div>
+        <div id="payment-info" class="payment-info" style="display: none;">
+          <h3>Instruksi Pembayaran</h3>
+          <div class="payment-details">
+            <div class="qr-code-container">
+              <img id="qr-code-img" src="" alt="QR Code Pembayaran">
+            </div>
+            <div class="payment-meta">
+              <p><strong>ID Transaksi:</strong> <span id="trx-id"></span></p>
+              <p><strong>Jumlah Deposit:</strong> <span id="trx-amount"></span></p>
+              <p><strong>Biaya Admin:</strong> <span id="trx-fee"></span></p>
+              <p><strong>Saldo Diterima:</strong> <span id="trx-received"></span></p>
+              <p><strong>Batas Waktu:</strong> <span id="trx-expiry"></span></p>
+              <button id="check-status" class="action-btn">Cek Status Pembayaran</button>
+            </div>
           </div>
-          <div class="payment-method">
-            <h3><i class="fas fa-university"></i> Bank Transfer</h3>
-            <p>Bank Name: Example Bank</p>
-            <p>Account Number: 1234567890</p>
-            <p>Account Name: SMM Panel</p>
-            <p>Minimum deposit: $20</p>
+          <div class="payment-instructions">
+            <h4>Cara Pembayaran:</h4>
+            <ol>
+              <li>Scan QR Code di atas menggunakan aplikasi mobile banking/e-wallet Anda</li>
+              <li>Atau gunakan QR string berikut: <code id="qr-string"></code></li>
+              <li>Saldo akan otomatis ditambahkan setelah pembayaran berhasil</li>
+            </ol>
           </div>
         </div>
-        <div class="payment-instructions">
-          <h3>Payment Instructions</h3>
-          <ol>
-            <li>Send your payment to one of the addresses above</li>
-            <li>After payment, contact support with your transaction details</li>
-            <li>Your balance will be updated within 1-24 hours</li>
-          </ol>
+        <div id="payment-history" class="payment-history">
+          <h3>Riwayat Transaksi</h3>
+          <div class="history-list" id="history-list">
+            <div class="empty">Belum ada transaksi</div>
+          </div>
         </div>
       </div>
     </main>
@@ -139,22 +143,29 @@
     <div class="modal" id="order-modal">
       <div class="modal-content">
         <span class="close-modal">&times;</span>
-        <h2>Order Details</h2>
+        <h2>Detail Pesanan</h2>
         <div id="order-details"></div>
       </div>
     </div>
 
+    <div class="modal" id="payment-modal">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Status Pembayaran</h2>
+        <div id="payment-status"></div>
+      </div>
+    </div>
+
     <footer>
-      <p>&copy; 2023 Professional SMM Panel. All rights reserved.</p>
+      <p>&copy; 2023 Panel SMM Profesional. Hak cipta dilindungi.</p>
       <div class="footer-links">
-        <a href="#">Terms of Service</a>
-        <a href="#">Privacy Policy</a>
-        <a href="#">Support</a>
+        <a href="#">Syarat Layanan</a>
+        <a href="#">Kebijakan Privasi</a>
+        <a href="#">Bantuan</a>
       </div>
     </footer>
   </div>
 
   <script src="app.js"></script>
-  <script src="payment.js"></script>
 </body>
 </html>
