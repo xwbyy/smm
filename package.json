@@ -1,7 +1,7 @@
 {
-  "name": "smm-panel-qris",
-  "version": "1.0.0",
-  "description": "SMM Panel dengan Pembayaran QRIS",
+  "name": "smm-panel-qris-pro",
+  "version": "2.0.0",
+  "description": "SMM Panel Professional dengan Pembayaran QRIS Otomatis",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
