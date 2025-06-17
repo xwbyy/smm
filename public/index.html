@@ -3,84 +3,106 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SMM Panel QRIS</title>
+  <title>SMM Panel PRO - Pembayaran QRIS Otomatis</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>SMM Panel QRIS</h1>
-      <p>Layanan SMM dengan pembayaran mudah via QRIS</p>
+      <h1><i class="fas fa-rocket"></i> SMM Panel PRO</h1>
+      <p>Layanan SMM Terbaik dengan Pembayaran QRIS Otomatis</p>
     </header>
     
-    <div class="panel">
-      <div class="service-selection">
-        <h2>Pilih Layanan</h2>
-        <select id="service-select">
-          <option value="">-- Pilih Layanan --</option>
-          <!-- Daftar layanan akan diisi oleh JavaScript -->
-        </select>
+    <div class="main-content">
+      <!-- Form Order -->
+      <div id="order-section" class="card">
+        <h2><i class="fas fa-cart-plus"></i> Buat Pesanan Baru</h2>
+        
+        <div class="form-group">
+          <label for="service-select"><i class="fas fa-list"></i> Pilih Layanan</label>
+          <select id="service-select" class="form-control">
+            <option value="">-- Loading Daftar Layanan --</option>
+          </select>
+        </div>
         
         <div id="service-details" class="hidden">
-          <h3>Detail Layanan</h3>
           <div class="details-grid">
-            <div><strong>Nama:</strong> <span id="service-name">-</span></div>
-            <div><strong>Kategori:</strong> <span id="service-category">-</span></div>
-            <div><strong>Rate:</strong> <span id="service-rate">-</span></div>
-            <div><strong>Min:</strong> <span id="service-min">-</span></div>
-            <div><strong>Max:</strong> <span id="service-max">-</span></div>
-            <div><strong>Refill:</strong> <span id="service-refill">-</span></div>
+            <div><i class="fas fa-tag"></i> <strong>Nama:</strong> <span id="service-name">-</span></div>
+            <div><i class="fas fa-layer-group"></i> <strong>Kategori:</strong> <span id="service-category">-</span></div>
+            <div><i class="fas fa-money-bill-wave"></i> <strong>Rate:</strong> <span id="service-rate">-</span></div>
+            <div><i class="fas fa-arrow-down"></i> <strong>Min:</strong> <span id="service-min">-</span></div>
+            <div><i class="fas fa-arrow-up"></i> <strong>Max:</strong> <span id="service-max">-</span></div>
           </div>
         </div>
+        
+        <div class="form-group">
+          <label for="link"><i class="fas fa-link"></i> Link Target</label>
+          <input type="url" id="link" class="form-control" required placeholder="https://example.com/username">
+        </div>
+        
+        <div class="form-group">
+          <label for="quantity"><i class="fas fa-hashtag"></i> Jumlah</label>
+          <input type="number" id="quantity" class="form-control" required min="1" placeholder="1000">
+          <small class="help-text">Min: <span id="min-quantity">1</span>, Max: <span id="max-quantity">1000</span></small>
+        </div>
+        
+        <div class="form-group">
+          <label><i class="fas fa-calculator"></i> Total Harga</label>
+          <div id="total-price" class="price-display">Rp0</div>
+        </div>
+        
+        <button id="submit-order" class="btn-primary">
+          <i class="fas fa-paper-plane"></i> Buat Pesanan & Bayar
+        </button>
       </div>
       
-      <div class="order-form">
-        <h2>Buat Pesanan</h2>
-        <form id="order-form">
-          <div class="form-group">
-            <label for="link">Link Target:</label>
-            <input type="url" id="link" required placeholder="https://example.com">
+      <!-- Pembayaran Section (Awalnya tersembunyi) -->
+      <div id="payment-section" class="card hidden">
+        <h2><i class="fas fa-qrcode"></i> Pembayaran QRIS</h2>
+        
+        <div class="payment-header">
+          <div class="payment-info">
+            <p><i class="fas fa-receipt"></i> <strong>ID Transaksi:</strong> <span id="transaction-id">-</span></p>
+            <p><i class="fas fa-money-bill"></i> <strong>Jumlah:</strong> <span id="payment-amount">Rp0</span></p>
+            <p><i class="fas fa-clock"></i> <strong>Batas Waktu:</strong> <span id="expiry-time">-</span></p>
           </div>
           
-          <div class="form-group">
-            <label for="quantity">Jumlah:</label>
-            <input type="number" id="quantity" required min="1" placeholder="1000">
-            <span id="quantity-help" class="help-text">Min: <span id="min-quantity">1</span>, Max: <span id="max-quantity">1000</span></span>
+          <div id="qr-code-container">
+            <img id="qr-code-image" src="" alt="QR Code Pembayaran">
+            <p class="scan-text">Scan QR Code untuk membayar</p>
           </div>
-          
-          <div class="form-group">
-            <label for="total">Total Harga:</label>
-            <input type="text" id="total" readonly value="Rp0">
-          </div>
-          
-          <button type="submit" id="submit-order">Pesan Sekarang</button>
-        </form>
+        </div>
+        
+        <div id="order-info" class="order-summary">
+          <h3><i class="fas fa-info-circle"></i> Detail Pesanan</h3>
+          <p><strong>Layanan:</strong> <span id="order-service">-</span></p>
+          <p><strong>Link Target:</strong> <span id="order-link">-</span></p>
+          <p><strong>Jumlah:</strong> <span id="order-quantity">-</span></p>
+          <p><strong>Order ID:</strong> <span id="order-id">-</span></p>
+        </div>
+        
+        <div id="payment-status" class="status-pending">
+          <i class="fas fa-sync-alt fa-spin"></i>
+          <span>Menunggu Pembayaran...</span>
+        </div>
+        
+        <div class="payment-actions">
+          <button id="check-status" class="btn-secondary">
+            <i class="fas fa-sync"></i> Periksa Status
+          </button>
+          <button id="new-order" class="btn-outline">
+            <i class="fas fa-plus"></i> Pesan Baru
+          </button>
+        </div>
       </div>
     </div>
     
-    <div id="payment-modal" class="modal hidden">
-      <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>Pembayaran QRIS</h2>
-        <div id="payment-details">
-          <div id="qr-code-container">
-            <img id="qr-code-image" src="" alt="QR Code Pembayaran">
-          </div>
-          <div class="payment-info">
-            <p><strong>ID Transaksi:</strong> <span id="transaction-id">-</span></p>
-            <p><strong>Jumlah:</strong> <span id="payment-amount">Rp0</span></p>
-            <p><strong>Batas Waktu:</strong> <span id="expiry-time">-</span></p>
-          </div>
-          <button id="check-payment">Cek Status Pembayaran</button>
-        </div>
-        <div id="payment-status" class="hidden">
-          <p id="status-message">Memeriksa status pembayaran...</p>
-        </div>
-      </div>
-    </div>
+    <footer>
+      <p>&copy; 2023 SMM Panel PRO | Pembayaran Aman dan Cepat dengan QRIS</p>
+    </footer>
   </div>
   
   <script src="app.js"></script>
-  <script src="payment.js"></script>
 </body>
 </html>
