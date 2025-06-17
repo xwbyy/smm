@@ -1,273 +1,160 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // DOM Elements
-  const serviceSearch = document.getElementById('service-search');
-  const serviceCategory = document.getElementById('service-category');
-  const serviceSort = document.getElementById('service-sort');
-  const serviceGrid = document.getElementById('service-grid');
-  const orderSection = document.getElementById('order-section');
-  const paymentSection = document.getElementById('payment-section');
-  const statusSection = document.getElementById('status-section');
-  const orderDetails = document.getElementById('order-details');
+  // Elemen DOM
+  const serviceSelect = document.getElementById('service-select');
+  const serviceDetails = document.getElementById('service-details');
   const orderForm = document.getElementById('order-form');
-  const orderLink = document.getElementById('order-link');
-  const orderQuantity = document.getElementById('order-quantity');
-  const quantityRange = document.getElementById('quantity-range');
-  const ratePerK = document.getElementById('rate-per-k');
-  const totalPrice = document.getElementById('total-price');
-  const submitOrder = document.getElementById('submit-order');
-  const backToServices = document.getElementById('back-to-services');
-  const backToOrder = document.getElementById('back-to-order');
-  const backToPayment = document.getElementById('back-to-payment');
+  const quantityInput = document.getElementById('quantity');
+  const minQuantitySpan = document.getElementById('min-quantity');
+  const maxQuantitySpan = document.getElementById('max-quantity');
+  const totalInput = document.getElementById('total');
+  const paymentModal = document.getElementById('payment-modal');
+  const closeModal = document.querySelector('.close');
   
-  // State
+  // Variabel state
   let services = [];
-  let categories = [];
   let selectedService = null;
   let currentOrder = null;
   
-  // Initialize
-  loadServices();
+  // Fungsi untuk memuat daftar layanan
+  async function loadServices() {
+    try {
+      const response = await fetch('/api/services');
+      if (!response.ok) throw new Error('Gagal memuat layanan');
+      
+      services = await response.json();
+      populateServiceSelect(services);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Gagal memuat daftar layanan. Silakan refresh halaman.');
+    }
+  }
   
-  // Event Listeners
-  serviceSearch.addEventListener('input', filterServices);
-  serviceCategory.addEventListener('change', filterServices);
-  serviceSort.addEventListener('change', filterServices);
-  orderQuantity.addEventListener('input', calculatePrice);
-  orderForm.addEventListener('submit', createOrder);
-  backToServices.addEventListener('click', showServicesSection);
-  backToOrder.addEventListener('click', showOrderSection);
-  backToPayment.addEventListener('click', showPaymentSection);
-  
-  // Load Services
-  function loadServices() {
-    serviceGrid.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Memuat layanan...</div>';
+  // Fungsi untuk mengisi dropdown layanan
+  function populateServiceSelect(services) {
+    serviceSelect.innerHTML = '<option value="">-- Pilih Layanan --</option>';
     
-    fetch('/api/services')
-      .then(response => response.json())
-      .then(data => {
-        services = data;
-        loadCategories();
-        filterServices();
-      })
-      .catch(error => {
-        console.error('Error loading services:', error);
-        serviceGrid.innerHTML = '<div class="error">Gagal memuat layanan. Silakan refresh halaman.</div>';
-      });
-  }
-  
-  // Load Categories
-  function loadCategories() {
-    categories = [...new Set(services.map(service => service.category))];
-    renderCategories();
-  }
-  
-  // Render Categories
-  function renderCategories() {
-    serviceCategory.innerHTML = '<option value="">Semua Kategori</option>';
-    categories.forEach(category => {
+    services.forEach(service => {
       const option = document.createElement('option');
-      option.value = category;
-      option.textContent = category;
-      serviceCategory.appendChild(option);
+      option.value = service.service;
+      option.textContent = `${service.name} (Rp${(service.rate * 1000).toLocaleString()}/1000)`;
+      serviceSelect.appendChild(option);
     });
   }
   
-  // Filter Services
-  function filterServices() {
-    const searchTerm = serviceSearch.value.toLowerCase();
-    const category = serviceCategory.value;
-    const sortBy = serviceSort.value;
+  // Event listener untuk perubahan pilihan layanan
+  serviceSelect.addEventListener('change', function() {
+    const serviceId = parseInt(this.value);
+    selectedService = services.find(s => s.service === serviceId);
     
-    let filtered = [...services];
-    
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(service => 
-        service.name.toLowerCase().includes(searchTerm) || 
-        service.category.toLowerCase().includes(searchTerm)
-      );
+    if (selectedService) {
+      updateServiceDetails(selectedService);
+      updateQuantityConstraints(selectedService);
+      serviceDetails.classList.remove('hidden');
+    } else {
+      serviceDetails.classList.add('hidden');
     }
     
-    // Filter by category
-    if (category) {
-      filtered = filtered.filter(service => service.category === category);
-    }
-    
-    // Sort services
-    switch (sortBy) {
-      case 'name-asc':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case 'name-desc':
-        filtered.sort((a, b) => b.name.localeCompare(a.name));
-        break;
-      case 'price-asc':
-        filtered.sort((a, b) => a.rate - b.rate);
-        break;
-      case 'price-desc':
-        filtered.sort((a, b) => b.rate - a.rate);
-        break;
-    }
-    
-    renderServices(filtered);
+    calculateTotal();
+  });
+  
+  // Fungsi untuk memperbarui detail layanan
+  function updateServiceDetails(service) {
+    document.getElementById('service-name').textContent = service.name;
+    document.getElementById('service-category').textContent = service.category;
+    document.getElementById('service-rate').textContent = `Rp${(service.rate * 1000).toLocaleString()}/1000`;
+    document.getElementById('service-min').textContent = service.min;
+    document.getElementById('service-max').textContent = service.max;
+    document.getElementById('service-refill').textContent = service.refill ? 'Ya' : 'Tidak';
   }
   
-  // Render Services
-  function renderServices(servicesToRender) {
-    if (servicesToRender.length === 0) {
-      serviceGrid.innerHTML = '<div class="no-results">Tidak ada layanan yang ditemukan</div>';
+  // Fungsi untuk memperbarui batasan kuantitas
+  function updateQuantityConstraints(service) {
+    quantityInput.min = service.min;
+    quantityInput.max = service.max;
+    minQuantitySpan.textContent = service.min;
+    maxQuantitySpan.textContent = service.max;
+  }
+  
+  // Event listener untuk perubahan kuantitas
+  quantityInput.addEventListener('input', calculateTotal);
+  
+  // Fungsi untuk menghitung total harga
+  function calculateTotal() {
+    if (!selectedService) {
+      totalInput.value = 'Rp0';
       return;
     }
     
-    serviceGrid.innerHTML = '';
-    servicesToRender.forEach(service => {
-      const card = document.createElement('div');
-      card.className = 'service-card';
-      card.innerHTML = `
-        <div class="service-category">${service.category}</div>
-        <h3>${service.name}</h3>
-        <div class="service-price">
-          Rp${(service.rate * 1000).toLocaleString('id-ID')} <small>/ ${service.min}-${service.max}</small>
-        </div>
-        <p>${service.type}</p>
-        <div class="service-meta">
-          <span><i class="fas fa-${service.refill ? 'check' : 'times'}"></i> ${service.refill ? 'Refill' : 'No Refill'}</span>
-          <span><i class="fas fa-${service.cancel ? 'check' : 'times'}"></i> ${service.cancel ? 'Cancel' : 'No Cancel'}</span>
-        </div>
-      `;
-      
-      card.addEventListener('click', () => selectService(service));
-      serviceGrid.appendChild(card);
-    });
+    const quantity = parseInt(quantityInput.value) || 0;
+    const rate = parseFloat(selectedService.rate);
+    const total = (rate * quantity * 1000).toFixed(0); // Konversi ke Rupiah
+    
+    totalInput.value = `Rp${parseInt(total).toLocaleString()}`;
   }
   
-  // Select Service
-  function selectService(service) {
-    selectedService = service;
-    
-    // Update order details
-    orderDetails.innerHTML = `
-      <h3>${service.name}</h3>
-      <p><strong>Kategori:</strong> ${service.category}</p>
-      <p><strong>Harga:</strong> Rp${(service.rate * 1000).toLocaleString('id-ID')} per 1000</p>
-      <p><strong>Min:</strong> ${service.min} | <strong>Max:</strong> ${service.max}</p>
-      <p><strong>Refill:</strong> ${service.refill ? 'Ya' : 'Tidak'} | <strong>Cancel:</strong> ${service.cancel ? 'Ya' : 'Tidak'}</p>
-    `;
-    
-    // Set quantity range
-    orderQuantity.min = service.min;
-    orderQuantity.max = service.max;
-    orderQuantity.value = service.min;
-    quantityRange.textContent = `(Min: ${service.min}, Max: ${service.max})`;
-    
-    // Calculate initial price
-    calculatePrice();
-    
-    // Show order section
-    showOrderSection();
-  }
-  
-  // Calculate Price
-  function calculatePrice() {
-    if (!selectedService) return;
-    
-    const quantity = parseInt(orderQuantity.value) || 0;
-    const rate = selectedService.rate;
-    const price = (rate * quantity).toFixed(2);
-    
-    ratePerK.textContent = `Rp${(rate * 1000).toLocaleString('id-ID')}`;
-    totalPrice.textContent = `Rp${(price * 1000).toLocaleString('id-ID')}`;
-  }
-  
-  // Create Order
-  function createOrder(e) {
+  // Event listener untuk submit form
+  orderForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    if (!selectedService) return;
-    
-    const link = orderLink.value;
-    const quantity = orderQuantity.value;
-    
-    if (!link || !quantity) {
-      alert('Harap isi semua field!');
+    if (!selectedService) {
+      alert('Silakan pilih layanan terlebih dahulu');
       return;
     }
     
-    submitOrder.disabled = true;
-    submitOrder.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    const link = document.getElementById('link').value;
+    const quantity = parseInt(quantityInput.value);
     
-    fetch('/api/orders', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        serviceId: selectedService.service,
-        link,
-        quantity
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        currentOrder = {
-          id: data.orderId,
-          serviceName: data.serviceName,
-          amount: data.amount,
+    if (quantity < selectedService.min || quantity > selectedService.max) {
+      alert(`Jumlah harus antara ${selectedService.min} dan ${selectedService.max}`);
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          service: selectedService.service,
           link,
           quantity
-        };
-        
-        initPaymentProcess(data.amount);
-      } else {
-        alert('Gagal membuat pesanan: ' + (data.error || 'Unknown error'));
-      }
-    })
-    .catch(error => {
-      console.error('Error creating order:', error);
-      alert('Terjadi kesalahan saat membuat pesanan');
-    })
-    .finally(() => {
-      submitOrder.disabled = false;
-      submitOrder.innerHTML = '<i class="fas fa-paper-plane"></i> Lanjutkan Pembayaran';
-    });
+        })
+      });
+      
+      if (!response.ok) throw new Error('Gagal membuat pesanan');
+      
+      const orderData = await response.json();
+      currentOrder = orderData;
+      showPaymentModal(orderData);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Gagal membuat pesanan. Silakan coba lagi.');
+    }
+  });
+  
+  // Fungsi untuk menampilkan modal pembayaran
+  function showPaymentModal(orderData) {
+    document.getElementById('qr-code-image').src = orderData.payment.qrImageUrl;
+    document.getElementById('transaction-id').textContent = orderData.payment.transactionId;
+    document.getElementById('payment-amount').textContent = `Rp${orderData.payment.amount.toLocaleString()}`;
+    document.getElementById('expiry-time').textContent = orderData.payment.expiredAt;
+    
+    paymentModal.classList.remove('hidden');
   }
   
-  // Show Sections
-  function showServicesSection() {
-    document.getElementById('services-section').classList.remove('hidden');
-    orderSection.classList.add('hidden');
-    paymentSection.classList.add('hidden');
-    statusSection.classList.add('hidden');
-  }
+  // Event listener untuk menutup modal
+  closeModal.addEventListener('click', function() {
+    paymentModal.classList.add('hidden');
+  });
   
-  function showOrderSection() {
-    document.getElementById('services-section').classList.add('hidden');
-    orderSection.classList.remove('hidden');
-    paymentSection.classList.add('hidden');
-    statusSection.classList.add('hidden');
-  }
+  // Event listener untuk klik di luar modal
+  window.addEventListener('click', function(e) {
+    if (e.target === paymentModal) {
+      paymentModal.classList.add('hidden');
+    }
+  });
   
-  function showPaymentSection() {
-    document.getElementById('services-section').classList.add('hidden');
-    orderSection.classList.add('hidden');
-    paymentSection.classList.remove('hidden');
-    statusSection.classList.add('hidden');
-  }
-  
-  function showStatusSection() {
-    document.getElementById('services-section').classList.add('hidden');
-    orderSection.classList.add('hidden');
-    paymentSection.classList.add('hidden');
-    statusSection.classList.remove('hidden');
-  }
+  // Memuat daftar layanan saat halaman dimuat
+  loadServices();
 });
-
-// Format Rupiah
-function formatRupiah(amount) {
-  return new Intl.NumberFormat('id-ID', { 
-    style: 'currency', 
-    currency: 'IDR',
-    minimumFractionDigits: 0
-  }).format(amount);
-}
