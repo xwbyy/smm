@@ -1,168 +1,152 @@
 document.addEventListener('DOMContentLoaded', function() {
-  const orderForm = document.getElementById('orderForm');
-  const paymentSection = document.getElementById('paymentSection');
-  const orderStatusSection = document.getElementById('orderStatusSection');
+  const serviceSelect = document.getElementById('service-select');
+  const serviceDetails = document.getElementById('service-details');
+  const orderForm = document.getElementById('order-form');
+  const quantityInput = document.getElementById('quantity');
+  const quantityRange = document.getElementById('quantity-range');
+  const paymentSection = document.getElementById('payment-section');
+  const orderSummary = document.getElementById('order-summary');
   
-  // Harga layanan (dalam Rupiah)
-  const servicePrices = {
-    '1': 900,    // Followers Instagram
-    '2': 800,    // Likes Instagram
-    '3': 500,    // Views YouTube
-    '4': 1500    // Subscribers YouTube
-  };
-  
-  // Nama layanan
-  const serviceNames = {
-    '1': 'Followers Instagram',
-    '2': 'Likes Instagram',
-    '3': 'Views YouTube',
-    '4': 'Subscribers YouTube'
-  };
-  
-  // Handle form submission
-  orderForm.addEventListener('submit', async function(e) {
+  let services = [];
+  let currentOrder = null;
+
+  // Memuat layanan dari API
+  fetch('/api/services')
+    .then(response => response.json())
+    .then(data => {
+      services = data;
+      renderServiceOptions();
+    })
+    .catch(error => {
+      console.error('Error loading services:', error);
+      serviceSelect.innerHTML = '<option value="">Gagal memuat layanan</option>';
+    });
+
+  // Render pilihan layanan
+  function renderServiceOptions() {
+    serviceSelect.innerHTML = '<option value="">Pilih layanan...</option>';
+    
+    services.forEach(service => {
+      const option = document.createElement('option');
+      option.value = service.service;
+      option.textContent = `${service.name} (Rp${service.rate}/item)`;
+      serviceSelect.appendChild(option);
+    });
+  }
+
+  // Menampilkan detail layanan yang dipilih
+  serviceSelect.addEventListener('change', function() {
+    const selectedServiceId = parseInt(this.value);
+    const service = services.find(s => s.service === selectedServiceId);
+    
+    if (service) {
+      serviceDetails.innerHTML = `
+        <h3>${service.name}</h3>
+        <p><strong>Kategori:</strong> ${service.category}</p>
+        <p><strong>Harga:</strong> Rp${service.rate} per item</p>
+        <p><strong>Jumlah minimal:</strong> ${service.min}</p>
+        <p><strong>Jumlah maksimal:</strong> ${service.max}</p>
+        <p><strong>Refill:</strong> ${service.refill ? 'Tersedia' : 'Tidak tersedia'}</p>
+        <p><strong>Pembatalan:</strong> ${service.cancel ? 'Diizinkan' : 'Tidak diizinkan'}</p>
+      `;
+      
+      quantityInput.min = service.min;
+      quantityInput.max = service.max;
+      quantityRange.textContent = `(Min: ${service.min}, Max: ${service.max})`;
+    } else {
+      serviceDetails.innerHTML = '';
+      quantityRange.textContent = '';
+    }
+  });
+
+  // Handle form order
+  orderForm.addEventListener('submit', function(e) {
     e.preventDefault();
     
-    const service = document.getElementById('service').value;
+    const serviceId = serviceSelect.value;
     const link = document.getElementById('link').value;
-    const quantity = document.getElementById('quantity').value;
+    const quantity = quantityInput.value;
     
-    // Validasi input
-    if (!service || !link || !quantity) {
+    if (!serviceId || !link || !quantity) {
       alert('Harap isi semua field!');
       return;
     }
     
-    // Buat order
-    try {
-      const response = await fetch('/api/order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          service,
-          link,
-          quantity
-        })
-      });
-      
-      const data = await response.json();
-      
+    const orderBtn = document.getElementById('order-btn');
+    orderBtn.disabled = true;
+    orderBtn.textContent = 'Memproses...';
+    
+    // Kirim order ke server
+    fetch('/api/order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        service: serviceId,
+        link,
+        quantity
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
       if (data.success) {
-        // Tampilkan section pembayaran
-        showPaymentSection(service, link, quantity, data.orderId);
+        currentOrder = {
+          orderId: data.orderId,
+          service: services.find(s => s.service === parseInt(serviceId)),
+          link,
+          quantity,
+          amount: calculateAmount(parseInt(serviceId), parseInt(quantity))
+        };
+        
+        showPaymentSection();
+        initPaymentProcess();
       } else {
-        alert('Gagal membuat order: ' + (data.message || 'Terjadi kesalahan'));
+        alert('Gagal membuat pesanan: ' + (data.error || 'Unknown error'));
       }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Terjadi kesalahan saat memproses order');
-    }
+    })
+    .catch(error => {
+      console.error('Error creating order:', error);
+      alert('Terjadi kesalahan saat membuat pesanan');
+    })
+    .finally(() => {
+      orderBtn.disabled = false;
+      orderBtn.textContent = 'Buat Pesanan';
+    });
   });
-  
-  // Fungsi untuk menampilkan section pembayaran
-  function showPaymentSection(service, link, quantity, orderId) {
-    // Hitung total harga
-    const unitPrice = servicePrices[service] || 0;
-    const totalPrice = unitPrice * quantity;
+
+  // Hitung jumlah pembayaran
+  function calculateAmount(serviceId, quantity) {
+    const service = services.find(s => s.service === serviceId);
+    if (!service) return 0;
     
-    // Update UI
-    document.getElementById('serviceName').textContent = serviceNames[service] || 'Unknown';
-    document.getElementById('targetLink').textContent = link;
-    document.getElementById('orderQuantity').textContent = quantity;
-    document.getElementById('totalPrice').textContent = totalPrice.toLocaleString('id-ID');
-    
-    // Sembunyikan form order, tampilkan payment section
-    orderForm.classList.add('hidden');
+    const rate = parseFloat(service.rate);
+    return Math.ceil(rate * quantity * 1000); // Convert to Rupiah (asumsi rate dalam ribuan)
+  }
+
+  // Tampilkan section pembayaran
+  function showPaymentSection() {
     paymentSection.classList.remove('hidden');
     
-    // Buat pembayaran QRIS
-    createQRISPayment(orderId, totalPrice);
-  }
-  
-  // Fungsi untuk membuat pembayaran QRIS
-  async function createQRISPayment(orderId, amount) {
-    try {
-      const response = await fetch('/api/create-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          orderId,
-          amount
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Tampilkan QR code
-        document.getElementById('qrisImage').src = data.qrImageUrl;
-        document.getElementById('paymentId').textContent = data.paymentData.reffId;
-        document.getElementById('paymentExpiry').textContent = data.paymentData.expiredAt;
-        
-        // Setup tombol cek pembayaran
-        document.getElementById('checkPaymentBtn').addEventListener('click', function() {
-          checkPaymentStatus(orderId);
-        });
-        
-        // Cek status pembayaran otomatis setiap 10 detik
-        const intervalId = setInterval(() => {
-          checkPaymentStatus(orderId, intervalId);
-        }, 10000);
-      } else {
-        alert('Gagal membuat pembayaran: ' + (data.message || 'Terjadi kesalahan'));
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Terjadi kesalahan saat membuat pembayaran');
-    }
-  }
-  
-  // Fungsi untuk mengecek status pembayaran
-  async function checkPaymentStatus(orderId, intervalId = null) {
-    try {
-      const response = await fetch(`/api/check-payment/${orderId}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        if (data.paid) {
-          // Pembayaran berhasil
-          document.getElementById('paymentStatus').textContent = 'Pembayaran Berhasil';
-          document.getElementById('paymentStatus').style.color = 'green';
-          
-          // Hentikan interval jika ada
-          if (intervalId) {
-            clearInterval(intervalId);
-          }
-          
-          // Tampilkan status order
-          showOrderStatus(orderId);
-        } else {
-          // Pembayaran masih pending
-          document.getElementById('paymentStatus').textContent = 'Menunggu Pembayaran';
-          document.getElementById('paymentStatus').style.color = 'orange';
-        }
-      } else {
-        alert('Gagal memeriksa status pembayaran: ' + (data.message || 'Terjadi kesalahan'));
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Terjadi kesalahan saat memeriksa status pembayaran');
-    }
-  }
-  
-  // Fungsi untuk menampilkan status order
-  function showOrderStatus(orderId) {
-    // Sembunyikan payment section, tampilkan order status
-    paymentSection.classList.add('hidden');
-    orderStatusSection.classList.remove('hidden');
+    // Scroll ke section pembayaran
+    paymentSection.scrollIntoView({ behavior: 'smooth' });
     
-    // Update UI dengan data order
-    document.getElementById('orderIdDisplay').textContent = orderId;
-    document.getElementById('orderStatus').textContent = 'Diproses';
-    document.getElementById('orderDate').textContent = new Date().toLocaleString('id-ID');
+    // Tampilkan ringkasan order
+    orderSummary.innerHTML = `
+      <h3>Ringkasan Pesanan</h3>
+      <p><strong>Layanan:</strong> ${currentOrder.service.name}</p>
+      <p><strong>Link Target:</strong> ${currentOrder.link}</p>
+      <p><strong>Jumlah:</strong> ${currentOrder.quantity}</p>
+      <p><strong>Total Pembayaran:</strong> Rp${currentOrder.amount.toLocaleString('id-ID')}</p>
+    `;
   }
 });
+
+// Fungsi untuk memformat angka ke Rupiah
+function formatRupiah(amount) {
+  return new Intl.NumberFormat('id-ID', { 
+    style: 'currency', 
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(amount);
+}
