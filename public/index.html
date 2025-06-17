@@ -3,110 +3,202 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IndoSMM Panel - Pembayaran QRIS</title>
-  <link rel="stylesheet" href="style.css">
+  <title>SMM Panel Pro - Pembayaran QRIS</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1><i class="fas fa-rocket"></i> IndoSMM Panel</h1>
-      <p>Layanan SMM Terbaik dengan Pembayaran QRIS</p>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="container">
+        <h1><i class="fas fa-rocket"></i> SMM Panel Pro</h1>
+        <p>Layanan SMM Terbaik dengan Pembayaran QRIS</p>
+      </div>
     </header>
 
-    <div class="main-panel">
-      <div class="sidebar">
-        <div class="search-box">
-          <input type="text" id="search-service" placeholder="Cari layanan...">
-          <i class="fas fa-search"></i>
-        </div>
-        
-        <div class="categories">
-          <h3><i class="fas fa-list"></i> Kategori</h3>
-          <ul id="category-list">
-            <li class="loading">Memuat kategori...</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="content">
-        <div class="services-section">
-          <h2><i class="fas fa-th-list"></i> Daftar Layanan</h2>
-          <div class="service-filters">
-            <select id="category-filter">
-              <option value="">Semua Kategori</option>
-            </select>
-            <select id="sort-by">
-              <option value="name">Sortir: Nama A-Z</option>
-              <option value="price-asc">Harga: Rendah ke Tinggi</option>
-              <option value="price-desc">Harga: Tinggi ke Rendah</option>
-            </select>
+    <!-- Main Content -->
+    <main class="app-main">
+      <div class="container">
+        <!-- Services Section -->
+        <section class="services-section" id="services-section">
+          <div class="section-header">
+            <h2><i class="fas fa-th-list"></i> Daftar Layanan</h2>
+            <div class="service-controls">
+              <div class="search-box">
+                <input type="text" id="service-search" placeholder="Cari layanan...">
+                <i class="fas fa-search"></i>
+              </div>
+              <select id="service-category">
+                <option value="">Semua Kategori</option>
+              </select>
+              <select id="service-sort">
+                <option value="name-asc">Nama A-Z</option>
+                <option value="name-desc">Nama Z-A</option>
+                <option value="price-asc">Harga Terendah</option>
+                <option value="price-desc">Harga Tertinggi</option>
+              </select>
+            </div>
           </div>
           
           <div class="service-grid" id="service-grid">
-            <div class="loading-service">
+            <div class="loading-state">
               <i class="fas fa-spinner fa-spin"></i> Memuat layanan...
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="order-section hidden" id="order-section">
-          <h2><i class="fas fa-cart-plus"></i> Buat Pesanan</h2>
+        <!-- Order Section -->
+        <section class="order-section hidden" id="order-section">
+          <div class="section-header">
+            <h2><i class="fas fa-cart-plus"></i> Buat Pesanan</h2>
+            <button class="btn-back" id="back-to-services">
+              <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+          </div>
+          
           <div class="order-details" id="order-details"></div>
           
           <form id="order-form">
             <div class="form-group">
-              <label for="link"><i class="fas fa-link"></i> Link Target:</label>
-              <input type="url" id="link" required placeholder="https://instagram.com/p/...">
+              <label for="order-link"><i class="fas fa-link"></i> Link Target</label>
+              <input type="url" id="order-link" required placeholder="https://instagram.com/p/...">
             </div>
             
             <div class="form-group">
-              <label for="quantity"><i class="fas fa-hashtag"></i> Jumlah:</label>
-              <input type="number" id="quantity" required>
-              <span id="quantity-range" class="range-info"></span>
+              <label for="order-quantity"><i class="fas fa-hashtag"></i> Jumlah</label>
+              <div class="quantity-control">
+                <input type="number" id="order-quantity" required>
+                <span class="quantity-range" id="quantity-range"></span>
+              </div>
             </div>
             
             <div class="price-summary">
-              <p><span>Harga per 1000:</span> <span id="rate-per-k">Rp0</span></p>
-              <p><span>Total Harga:</span> <span id="total-price">Rp0</span></p>
+              <div class="price-row">
+                <span>Harga per 1000:</span>
+                <span id="rate-per-k">Rp0</span>
+              </div>
+              <div class="price-row">
+                <span>Total Harga:</span>
+                <span id="total-price">Rp0</span>
+              </div>
             </div>
             
-            <button type="submit" id="order-btn" class="btn-primary">
-              <i class="fas fa-paper-plane"></i> Buat Pesanan
+            <button type="submit" class="btn-primary" id="submit-order">
+              <i class="fas fa-paper-plane"></i> Lanjutkan Pembayaran
             </button>
           </form>
-        </div>
+        </section>
 
-        <div class="payment-section hidden" id="payment-section">
-          <h2><i class="fas fa-qrcode"></i> Pembayaran QRIS</h2>
+        <!-- Payment Section -->
+        <section class="payment-section hidden" id="payment-section">
+          <div class="section-header">
+            <h2><i class="fas fa-qrcode"></i> Pembayaran</h2>
+            <button class="btn-back" id="back-to-order">
+              <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+          </div>
+          
           <div class="order-summary" id="order-summary"></div>
           
-          <div class="qris-container">
-            <img id="qris-image" src="" alt="QR Code Pembayaran">
-            <p class="scan-text">Scan QR code di atas untuk melakukan pembayaran</p>
-            
-            <div class="qris-string-container">
-              <textarea id="qris-string" readonly></textarea>
-              <button id="copy-qris" class="btn-secondary">
-                <i class="far fa-copy"></i> Salin
-              </button>
+          <div class="payment-container">
+            <div class="qris-box">
+              <img id="qris-image" src="" alt="QRIS Code">
+              <p class="scan-info">Scan QR code di atas untuk melakukan pembayaran</p>
+              
+              <div class="qris-string-box">
+                <textarea id="qris-string" readonly></textarea>
+                <button class="btn-copy" id="copy-qris">
+                  <i class="far fa-copy"></i> Salin
+                </button>
+              </div>
             </div>
             
             <div class="payment-info">
-              <p><i class="far fa-clock"></i> Batas Waktu: <span id="expiry-time"></span></p>
-              <p><i class="fas fa-info-circle"></i> Status: <span id="payment-status">Menunggu pembayaran...</span></p>
+              <div class="info-item">
+                <i class="fas fa-clock"></i>
+                <div>
+                  <span>Batas Waktu</span>
+                  <span id="payment-expiry">--:--:--</span>
+                </div>
+              </div>
+              
+              <div class="info-item">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                  <span>Status</span>
+                  <span id="payment-status">Menunggu pembayaran</span>
+                </div>
+              </div>
             </div>
             
-            <button id="check-status-btn" class="btn-primary">
+            <button class="btn-check-status" id="check-status">
               <i class="fas fa-sync-alt"></i> Periksa Status
             </button>
           </div>
-        </div>
-      </div>
-    </div>
+        </section>
 
-    <footer>
-      <p>&copy; 2023 IndoSMM Panel | Pembayaran Aman dengan QRIS</p>
+        <!-- Order Status Section -->
+        <section class="status-section hidden" id="status-section">
+          <div class="section-header">
+            <h2><i class="fas fa-tasks"></i> Status Pesanan</h2>
+            <button class="btn-back" id="back-to-payment">
+              <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+          </div>
+          
+          <div class="order-status-card">
+            <div class="status-header">
+              <h3 id="status-service-name">Layanan</h3>
+              <span class="status-badge" id="status-badge">Pending</span>
+            </div>
+            
+            <div class="status-details">
+              <div class="detail-item">
+                <span>ID Pesanan</span>
+                <span id="status-order-id">-</span>
+              </div>
+              <div class="detail-item">
+                <span>Link Target</span>
+                <span id="status-link">-</span>
+              </div>
+              <div class="detail-item">
+                <span>Jumlah</span>
+                <span id="status-quantity">-</span>
+              </div>
+              <div class="detail-item">
+                <span>Total Harga</span>
+                <span id="status-price">-</span>
+              </div>
+            </div>
+            
+            <div class="progress-container">
+              <div class="progress-info">
+                <span>Terkirim</span>
+                <span id="completed-count">0</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+              <div class="progress-info">
+                <span>Sisa</span>
+                <span id="remaining-count">0</span>
+              </div>
+            </div>
+            
+            <button class="btn-refresh-status" id="refresh-status">
+              <i class="fas fa-sync-alt"></i> Perbarui Status
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="container">
+        <p>&copy; 2023 SMM Panel Pro | Pembayaran Aman dengan QRIS</p>
+      </div>
     </footer>
   </div>
 

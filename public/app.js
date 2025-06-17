@@ -1,19 +1,23 @@
 document.addEventListener('DOMContentLoaded', function() {
   // DOM Elements
-  const searchInput = document.getElementById('search-service');
-  const categoryList = document.getElementById('category-list');
-  const categoryFilter = document.getElementById('category-filter');
-  const sortBy = document.getElementById('sort-by');
+  const serviceSearch = document.getElementById('service-search');
+  const serviceCategory = document.getElementById('service-category');
+  const serviceSort = document.getElementById('service-sort');
   const serviceGrid = document.getElementById('service-grid');
   const orderSection = document.getElementById('order-section');
   const paymentSection = document.getElementById('payment-section');
+  const statusSection = document.getElementById('status-section');
   const orderDetails = document.getElementById('order-details');
   const orderForm = document.getElementById('order-form');
-  const quantityInput = document.getElementById('quantity');
+  const orderLink = document.getElementById('order-link');
+  const orderQuantity = document.getElementById('order-quantity');
   const quantityRange = document.getElementById('quantity-range');
   const ratePerK = document.getElementById('rate-per-k');
   const totalPrice = document.getElementById('total-price');
-  const orderBtn = document.getElementById('order-btn');
+  const submitOrder = document.getElementById('submit-order');
+  const backToServices = document.getElementById('back-to-services');
+  const backToOrder = document.getElementById('back-to-order');
+  const backToPayment = document.getElementById('back-to-payment');
   
   // State
   let services = [];
@@ -21,81 +25,29 @@ document.addEventListener('DOMContentLoaded', function() {
   let selectedService = null;
   let currentOrder = null;
   
-  // Init
-  loadCategories();
+  // Initialize
   loadServices();
   
   // Event Listeners
-  searchInput.addEventListener('input', filterServices);
-  categoryFilter.addEventListener('change', filterServices);
-  sortBy.addEventListener('change', filterServices);
-  quantityInput.addEventListener('input', calculatePrice);
+  serviceSearch.addEventListener('input', filterServices);
+  serviceCategory.addEventListener('change', filterServices);
+  serviceSort.addEventListener('change', filterServices);
+  orderQuantity.addEventListener('input', calculatePrice);
   orderForm.addEventListener('submit', createOrder);
-  
-  // Load Categories
-  function loadCategories() {
-    categoryList.innerHTML = '<li class="loading">Memuat kategori...</li>';
-    
-    fetch('/api/categories')
-      .then(response => response.json())
-      .then(data => {
-        categories = data;
-        renderCategories();
-      })
-      .catch(error => {
-        console.error('Error loading categories:', error);
-        categoryList.innerHTML = '<li>Gagal memuat kategori</li>';
-      });
-  }
-  
-  // Render Categories
-  function renderCategories() {
-    categoryList.innerHTML = '';
-    
-    // Add "All" category
-    const allItem = document.createElement('li');
-    allItem.textContent = 'Semua Kategori';
-    allItem.classList.add('active');
-    allItem.addEventListener('click', () => {
-      document.querySelectorAll('#category-list li').forEach(li => li.classList.remove('active'));
-      allItem.classList.add('active');
-      categoryFilter.value = '';
-      filterServices();
-    });
-    categoryList.appendChild(allItem);
-    
-    // Add other categories
-    categories.forEach(category => {
-      const item = document.createElement('li');
-      item.textContent = category;
-      item.addEventListener('click', () => {
-        document.querySelectorAll('#category-list li').forEach(li => li.classList.remove('active'));
-        item.classList.add('active');
-        categoryFilter.value = category;
-        filterServices();
-      });
-      categoryList.appendChild(item);
-    });
-    
-    // Also populate category filter dropdown
-    categoryFilter.innerHTML = '<option value="">Semua Kategori</option>';
-    categories.forEach(category => {
-      const option = document.createElement('option');
-      option.value = category;
-      option.textContent = category;
-      categoryFilter.appendChild(option);
-    });
-  }
+  backToServices.addEventListener('click', showServicesSection);
+  backToOrder.addEventListener('click', showOrderSection);
+  backToPayment.addEventListener('click', showPaymentSection);
   
   // Load Services
   function loadServices() {
-    serviceGrid.innerHTML = '<div class="loading-service"><i class="fas fa-spinner fa-spin"></i> Memuat layanan...</div>';
+    serviceGrid.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Memuat layanan...</div>';
     
     fetch('/api/services')
       .then(response => response.json())
       .then(data => {
         services = data;
-        renderServices(services);
+        loadCategories();
+        filterServices();
       })
       .catch(error => {
         console.error('Error loading services:', error);
@@ -103,19 +55,75 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
   
+  // Load Categories
+  function loadCategories() {
+    categories = [...new Set(services.map(service => service.category))];
+    renderCategories();
+  }
+  
+  // Render Categories
+  function renderCategories() {
+    serviceCategory.innerHTML = '<option value="">Semua Kategori</option>';
+    categories.forEach(category => {
+      const option = document.createElement('option');
+      option.value = category;
+      option.textContent = category;
+      serviceCategory.appendChild(option);
+    });
+  }
+  
+  // Filter Services
+  function filterServices() {
+    const searchTerm = serviceSearch.value.toLowerCase();
+    const category = serviceCategory.value;
+    const sortBy = serviceSort.value;
+    
+    let filtered = [...services];
+    
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(service => 
+        service.name.toLowerCase().includes(searchTerm) || 
+        service.category.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    // Filter by category
+    if (category) {
+      filtered = filtered.filter(service => service.category === category);
+    }
+    
+    // Sort services
+    switch (sortBy) {
+      case 'name-asc':
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'name-desc':
+        filtered.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case 'price-asc':
+        filtered.sort((a, b) => a.rate - b.rate);
+        break;
+      case 'price-desc':
+        filtered.sort((a, b) => b.rate - a.rate);
+        break;
+    }
+    
+    renderServices(filtered);
+  }
+  
   // Render Services
   function renderServices(servicesToRender) {
-    serviceGrid.innerHTML = '';
-    
     if (servicesToRender.length === 0) {
       serviceGrid.innerHTML = '<div class="no-results">Tidak ada layanan yang ditemukan</div>';
       return;
     }
     
+    serviceGrid.innerHTML = '';
     servicesToRender.forEach(service => {
-      const serviceCard = document.createElement('div');
-      serviceCard.className = 'service-card';
-      serviceCard.innerHTML = `
+      const card = document.createElement('div');
+      card.className = 'service-card';
+      card.innerHTML = `
         <div class="service-category">${service.category}</div>
         <h3>${service.name}</h3>
         <div class="service-price">
@@ -123,53 +131,14 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         <p>${service.type}</p>
         <div class="service-meta">
-          <span><i class="fas fa-${service.refill ? 'check-circle' : 'times-circle'}"></i> ${service.refill ? 'Refill' : 'No Refill'}</span>
-          <span><i class="fas fa-${service.cancel ? 'check-circle' : 'times-circle'}"></i> ${service.cancel ? 'Cancel' : 'No Cancel'}</span>
+          <span><i class="fas fa-${service.refill ? 'check' : 'times'}"></i> ${service.refill ? 'Refill' : 'No Refill'}</span>
+          <span><i class="fas fa-${service.cancel ? 'check' : 'times'}"></i> ${service.cancel ? 'Cancel' : 'No Cancel'}</span>
         </div>
       `;
       
-      serviceCard.addEventListener('click', () => selectService(service));
-      serviceGrid.appendChild(serviceCard);
+      card.addEventListener('click', () => selectService(service));
+      serviceGrid.appendChild(card);
     });
-  }
-  
-  // Filter Services
-  function filterServices() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const selectedCategory = categoryFilter.value;
-    const sortOption = sortBy.value;
-    
-    let filteredServices = [...services];
-    
-    // Filter by search term
-    if (searchTerm) {
-      filteredServices = filteredServices.filter(service => 
-        service.name.toLowerCase().includes(searchTerm) || 
-        service.category.toLowerCase().includes(searchTerm)
-      );
-    }
-    
-    // Filter by category
-    if (selectedCategory) {
-      filteredServices = filteredServices.filter(service => 
-        service.category === selectedCategory
-      );
-    }
-    
-    // Sort services
-    switch (sortOption) {
-      case 'name':
-        filteredServices.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case 'price-asc':
-        filteredServices.sort((a, b) => parseFloat(a.rate) - parseFloat(b.rate));
-        break;
-      case 'price-desc':
-        filteredServices.sort((a, b) => parseFloat(b.rate) - parseFloat(a.rate));
-        break;
-    }
-    
-    renderServices(filteredServices);
   }
   
   // Select Service
@@ -186,28 +155,24 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     
     // Set quantity range
-    quantityInput.min = service.min;
-    quantityInput.max = service.max;
-    quantityInput.value = service.min;
+    orderQuantity.min = service.min;
+    orderQuantity.max = service.max;
+    orderQuantity.value = service.min;
     quantityRange.textContent = `(Min: ${service.min}, Max: ${service.max})`;
     
     // Calculate initial price
     calculatePrice();
     
     // Show order section
-    orderSection.classList.remove('hidden');
-    paymentSection.classList.add('hidden');
-    
-    // Scroll to order section
-    orderSection.scrollIntoView({ behavior: 'smooth' });
+    showOrderSection();
   }
   
   // Calculate Price
   function calculatePrice() {
     if (!selectedService) return;
     
-    const quantity = parseInt(quantityInput.value) || 0;
-    const rate = parseFloat(selectedService.rate);
+    const quantity = parseInt(orderQuantity.value) || 0;
+    const rate = selectedService.rate;
     const price = (rate * quantity).toFixed(2);
     
     ratePerK.textContent = `Rp${(rate * 1000).toLocaleString('id-ID')}`;
@@ -220,18 +185,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (!selectedService) return;
     
-    const link = document.getElementById('link').value;
-    const quantity = quantityInput.value;
+    const link = orderLink.value;
+    const quantity = orderQuantity.value;
     
     if (!link || !quantity) {
       alert('Harap isi semua field!');
       return;
     }
     
-    orderBtn.disabled = true;
-    orderBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    submitOrder.disabled = true;
+    submitOrder.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
     
-    fetch('/api/order', {
+    fetch('/api/orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -246,7 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(data => {
       if (data.success) {
         currentOrder = {
-          orderId: data.orderId,
+          id: data.orderId,
           serviceName: data.serviceName,
           amount: data.amount,
           link,
@@ -263,9 +228,38 @@ document.addEventListener('DOMContentLoaded', function() {
       alert('Terjadi kesalahan saat membuat pesanan');
     })
     .finally(() => {
-      orderBtn.disabled = false;
-      orderBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Buat Pesanan';
+      submitOrder.disabled = false;
+      submitOrder.innerHTML = '<i class="fas fa-paper-plane"></i> Lanjutkan Pembayaran';
     });
+  }
+  
+  // Show Sections
+  function showServicesSection() {
+    document.getElementById('services-section').classList.remove('hidden');
+    orderSection.classList.add('hidden');
+    paymentSection.classList.add('hidden');
+    statusSection.classList.add('hidden');
+  }
+  
+  function showOrderSection() {
+    document.getElementById('services-section').classList.add('hidden');
+    orderSection.classList.remove('hidden');
+    paymentSection.classList.add('hidden');
+    statusSection.classList.add('hidden');
+  }
+  
+  function showPaymentSection() {
+    document.getElementById('services-section').classList.add('hidden');
+    orderSection.classList.add('hidden');
+    paymentSection.classList.remove('hidden');
+    statusSection.classList.add('hidden');
+  }
+  
+  function showStatusSection() {
+    document.getElementById('services-section').classList.add('hidden');
+    orderSection.classList.add('hidden');
+    paymentSection.classList.add('hidden');
+    statusSection.classList.remove('hidden');
   }
 });
 
