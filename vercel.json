@@ -11,10 +11,5 @@
       "src": "/(.*)",
       "dest": "server.js"
     }
-  ],
-  "env": {
-    "INDO_SMM_API_KEY": "@indo_smm_api_key",
-    "HIAY_API_KEY": "@hiay_api_key",
-    "PRICE_MARKUP": "20"
-  }
+  ]
 }
