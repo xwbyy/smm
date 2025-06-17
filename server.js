@@ -4,14 +4,9 @@ const path = require('path');
 const axios = require('axios');
 const cors = require('cors');
 const qr = require('qr-image');
+
 const app = express();
 const port = process.env.PORT || 3000;
-
-// Konfigurasi API
-const SMM_API_KEY = '4e59a83d29629d875f9eaa48134d630d';
-const SMM_API_URL = 'https://indosmm.id/api/v2';
-const PAYMENT_API_KEY = 'Fupei-pedia-l3p5q04yqvppzw22';
-const PAYMENT_API_URL = 'https://fupei-pedia.web.id/api/v1/deposit';
 
 // Middleware
 app.use(cors());
@@ -21,7 +16,13 @@ app.use(express.static(path.join(__dirname, 'public'), {
   extensions: ['html']
 }));
 
-// Middleware untuk verifikasi API key
+// Konfigurasi API
+const SMM_API_KEY = '4e59a83d29629d875f9eaa48134d630d';
+const SMM_API_URL = 'https://indosmm.id/api/v2';
+const PAYMENT_API_KEY = 'Fupei-pedia-l3p5q04yqvppzw22';
+const PAYMENT_API_URL = 'https://fupei-pedia.web.id/api/v1/deposit';
+
+// Middleware verifikasi API key
 const verifyApiKey = (req, res, next) => {
   if (!req.body.key && !req.query.key) {
     return res.status(400).json({ error: 'API key diperlukan' });
@@ -29,7 +30,7 @@ const verifyApiKey = (req, res, next) => {
   next();
 };
 
-// Endpoint untuk layanan SMM
+// Endpoint untuk layanan
 app.post('/api/services', verifyApiKey, async (req, res) => {
   try {
     const response = await axios.post(SMM_API_URL, {
@@ -42,7 +43,7 @@ app.post('/api/services', verifyApiKey, async (req, res) => {
   }
 });
 
-// Endpoint untuk membuat pesanan
+// Endpoint untuk order baru
 app.post('/api/order', verifyApiKey, async (req, res) => {
   try {
     const response = await axios.post(SMM_API_URL, {
@@ -60,7 +61,7 @@ app.post('/api/order', verifyApiKey, async (req, res) => {
   }
 });
 
-// Endpoint untuk status pesanan
+// Endpoint untuk status order
 app.post('/api/order/status', verifyApiKey, async (req, res) => {
   try {
     const response = await axios.post(SMM_API_URL, {
@@ -74,7 +75,7 @@ app.post('/api/order/status', verifyApiKey, async (req, res) => {
   }
 });
 
-// Endpoint untuk saldo
+// Endpoint untuk cek saldo
 app.post('/api/balance', verifyApiKey, async (req, res) => {
   try {
     const response = await axios.post(SMM_API_URL, {
@@ -91,6 +92,7 @@ app.post('/api/balance', verifyApiKey, async (req, res) => {
 app.post('/api/payment', async (req, res) => {
   try {
     const { amount } = req.body;
+    
     if (!amount || amount < 1000) {
       return res.status(400).json({ error: 'Jumlah minimal deposit adalah 1000' });
     }
@@ -99,9 +101,6 @@ app.post('/api/payment', async (req, res) => {
       params: {
         nominal: amount,
         apikey: PAYMENT_API_KEY
-      },
-      headers: {
-        'User-Agent': 'Mozilla/5.0'
       }
     });
 
@@ -109,50 +108,36 @@ app.post('/api/payment', async (req, res) => {
       return res.status(400).json({ error: response.data.message || 'Gagal membuat transaksi' });
     }
 
-    const trx = response.data.data;
-    const qrCode = qr.imageSync(trx.qr_string, { type: 'png' });
+    const paymentData = response.data.data;
+    const qrCode = qr.imageSync(paymentData.qr_string, { type: 'png' });
 
     res.json({
       success: true,
-      transaction: {
-        id: trx.id,
-        reff_id: trx.reff_id,
-        amount: trx.nominal,
-        fee: trx.fee,
-        received: trx.get_balance,
-        expired_at: trx.expired_at,
-        qr_string: trx.qr_string,
-        qr_code: qrCode.toString('base64')
+      data: {
+        ...paymentData,
+        qr_image: qrCode.toString('base64')
       }
     });
   } catch (error) {
-    console.error('Error pembayaran:', error);
-    res.status(500).json({ error: 'Terjadi kesalahan saat memproses pembayaran' });
+    res.status(500).json({ error: error.message });
   }
 });
 
 // Endpoint untuk cek status pembayaran
-app.get('/api/payment/status', async (req, res) => {
+app.get('/api/payment/status/:trxid', async (req, res) => {
   try {
-    const { trxid } = req.query;
-    if (!trxid) {
-      return res.status(400).json({ error: 'ID transaksi diperlukan' });
-    }
-
+    const { trxid } = req.params;
+    
     const response = await axios.get(`${PAYMENT_API_URL}/status`, {
       params: {
         trxid: trxid,
         apikey: PAYMENT_API_KEY
-      },
-      headers: {
-        'User-Agent': 'Mozilla/5.0'
       }
     });
 
     res.json(response.data);
   } catch (error) {
-    console.error('Error cek status:', error);
-    res.status(500).json({ error: 'Terjadi kesalahan saat memeriksa status' });
+    res.status(500).json({ error: error.message });
   }
 });
 
