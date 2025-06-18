@@ -1,1 +1,68 @@
-<!-- status.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Status - SMM Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>SMM Panel</h1>
+      <nav>
+        <ul>
+          <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+          <li><a href="/services.html"><i class="fas fa-list"></i> Services</a></li>
+          <li><a href="/order.html"><i class="fas fa-shopping-cart"></i> Order</a></li>
+          <li><a href="/status.html" class="active"><i class="fas fa-history"></i> Order Status</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h2>Order Status</h2>
+    
+    <div class="status-search">
+      <input type="text" id="orderIdInput" placeholder="Enter Order ID">
+      <button id="checkStatusBtn" class="btn primary">Check Status</button>
+    </div>
+    
+    <div id="statusResult" class="status-result">
+      <div class="status-card hidden" id="statusCard">
+        <h3>Order #<span id="statusOrderId"></span></h3>
+        <div class="status-details">
+          <p><strong>Status:</strong> <span id="statusText" class="status-badge"></span></p>
+          <p><strong>Charge:</strong> <span id="statusCharge"></span></p>
+          <p><strong>Start Count:</strong> <span id="statusStartCount"></span></p>
+          <p><strong>Remains:</strong> <span id="statusRemains"></span></p>
+          <p><strong>Currency:</strong> <span id="statusCurrency"></span></p>
+        </div>
+      </div>
+      
+      <div id="noStatus" class="no-status">
+        <i class="fas fa-info-circle"></i>
+        <p>Enter an Order ID to check its status</p>
+      </div>
+    </div>
+    
+    <div class="bulk-status">
+      <h3>Check Multiple Orders</h3>
+      <textarea id="bulkOrderIds" placeholder="Enter multiple Order IDs separated by commas"></textarea>
+      <button id="checkBulkStatusBtn" class="btn secondary">Check Bulk Status</button>
+      <div id="bulkStatusResult" class="bulk-status-result"></div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2023 SMM Panel Professional. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

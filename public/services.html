@@ -1,1 +1,66 @@
-<!-- services.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Services - SMM Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>SMM Panel</h1>
+      <nav>
+        <ul>
+          <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+          <li><a href="/services.html" class="active"><i class="fas fa-list"></i> Services</a></li>
+          <li><a href="/order.html"><i class="fas fa-shopping-cart"></i> Order</a></li>
+          <li><a href="/status.html"><i class="fas fa-history"></i> Order Status</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h2>Our Services</h2>
+    <div class="search-filter">
+      <input type="text" id="serviceSearch" placeholder="Search services...">
+      <select id="categoryFilter">
+        <option value="">All Categories</option>
+      </select>
+    </div>
+    
+    <div class="services-container">
+      <table id="servicesTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Service</th>
+            <th>Category</th>
+            <th>Rate (per 1000)</th>
+            <th>Min</th>
+            <th>Max</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="servicesList">
+          <!-- Services will be loaded here -->
+        </tbody>
+      </table>
+      <div id="loading" class="loading">
+        <i class="fas fa-spinner fa-spin"></i> Loading services...
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2023 SMM Panel Professional. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
