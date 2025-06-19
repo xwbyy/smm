@@ -25,7 +25,7 @@ app.post('/api/proxy', async (req, res) => {
     const apiUrl = 'https://indosmm.id/api/v2';
 
     const response = await axios.post(apiUrl, {
-      key: process.env.API_KEY || '4e59a83d29629d875f9eaa48134d630d',
+      key: process.env.API_KEY || 'your-api-key',
       action,
       ...params
     });
