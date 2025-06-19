@@ -1,1 +1,112 @@
-<!-- payment.html content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment - SMM Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>SMM Panel</h1>
+      <nav>
+        <ul>
+          <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+          <li><a href="/services.html"><i class="fas fa-list"></i> Services</a></li>
+          <li><a href="/order.html"><i class="fas fa-shopping-cart"></i> Order</a></li>
+          <li><a href="/status.html"><i class="fas fa-history"></i> Order Status</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="payment-container">
+      <h2>Complete Your Payment</h2>
+      
+      <div class="payment-card">
+        <div class="qr-code-container">
+          <img id="paymentQrCode" src="" alt="QR Code">
+          <p>Scan this QR code to complete your payment</p>
+        </div>
+        
+        <div class="payment-details">
+          <h3>Payment Details</h3>
+          <div class="detail-row">
+            <span class="detail-label">Order ID:</span>
+            <span id="paymentOrderId" class="detail-value">-</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Amount:</span>
+            <span id="paymentAmount" class="detail-value">Rp0</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Expires at:</span>
+            <span id="paymentExpiry" class="detail-value">-</span>
+          </div>
+          
+          <button id="checkPaymentBtn" class="btn primary">Check Payment Status</button>
+        </div>
+      </div>
+      
+      <div id="paymentStatus" class="payment-status">
+        <div class="status-message">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Waiting for payment...</p>
+        </div>
+      </div>
+      
+      <div class="payment-instructions">
+        <h3>Payment Instructions</h3>
+        <ol>
+          <li>Open your mobile banking or e-wallet app</li>
+          <li>Select QRIS payment option</li>
+          <li>Scan the QR code above</li>
+          <li>Confirm the payment amount</li>
+          <li>Complete the transaction</li>
+        </ol>
+        <p class="note">Note: Your order will be processed automatically after payment confirmation.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2023 SMM Panel Professional. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get payment data from URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get('order');
+      const amount = urlParams.get('amount');
+      const qrCode = urlParams.get('qr');
+      const expiry = urlParams.get('expiry');
+      
+      // Display payment details
+      if (orderId) document.getElementById('paymentOrderId').textContent = orderId;
+      if (amount) document.getElementById('paymentAmount').textContent = `Rp${parseInt(amount).toLocaleString('id-ID')}`;
+      if (qrCode) document.getElementById('paymentQrCode').src = qrCode;
+      if (expiry) document.getElementById('paymentExpiry').textContent = new Date(expiry).toLocaleString();
+      
+      // Check payment status button
+      document.getElementById('checkPaymentBtn').addEventListener('click', function() {
+        const paymentStatus = document.getElementById('paymentStatus');
+        paymentStatus.innerHTML = `
+          <div class="status-message success">
+            <i class="fas fa-check-circle"></i>
+            <p>Payment completed! Your order is being processed.</p>
+            <a href="/status.html?order=${orderId}" class="btn secondary">View Order Status</a>
+          </div>
+        `;
+      });
+    });
+  </script>
+</body>
+</html>
