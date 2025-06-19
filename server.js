@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public'), {
   extensions: ['html']
-});
+}));
 
 // API Proxy Endpoint
 app.post('/api/proxy', async (req, res) => {
@@ -81,6 +81,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
