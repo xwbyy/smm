@@ -11,6 +11,27 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Fungsi untuk menampilkan loading
+function showLoading(element, text = 'Memproses...') {
+  if (!element) return;
+  
+  element.innerHTML = `
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>${text}</p>
+    </div>
+  `;
+  element.style.display = 'block';
+}
+
+// Fungsi untuk menyembunyikan loading
+function hideLoading(element) {
+  if (!element) return;
+  
+  element.style.display = 'none';
+  element.innerHTML = '';
+}
+
 // Services Page Logic
 function initServicesPage() {
   const servicesTable = document.getElementById('servicesList');
@@ -21,7 +42,7 @@ function initServicesPage() {
   fetchServices();
   
   function fetchServices() {
-    loadingElement.style.display = 'block';
+    showLoading(loadingElement, 'Memuat layanan...');
     servicesTable.innerHTML = '';
     
     fetch(config.API_BASE_URL, {
@@ -33,20 +54,25 @@ function initServicesPage() {
         action: 'services'
       })
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Gagal memuat layanan');
+      }
+      return response.json();
+    })
     .then(data => {
-      loadingElement.style.display = 'none';
+      hideLoading(loadingElement);
       if (Array.isArray(data)) {
         displayServices(data);
         populateCategoryFilter(data);
       } else {
-        servicesTable.innerHTML = '<tr><td colspan="7">Failed to load services. Please try again.</td></tr>';
+        servicesTable.innerHTML = '<tr><td colspan="7">Gagal memuat layanan. Silakan coba lagi.</td></tr>';
       }
     })
     .catch(error => {
       console.error('Error:', error);
-      loadingElement.style.display = 'none';
-      servicesTable.innerHTML = '<tr><td colspan="7">Error loading services. Please refresh the page.</td></tr>';
+      hideLoading(loadingElement);
+      servicesTable.innerHTML = `<tr><td colspan="7">Error memuat layanan: ${error.message}</td></tr>`;
     });
   }
   
@@ -66,7 +92,7 @@ function initServicesPage() {
         <td>Rp${ratePer1000.toLocaleString('id-ID')}</td>
         <td>${service.min}</td>
         <td>${service.max}</td>
-        <td><a href="/order.html?service=${service.service}" class="btn primary small">Order Now</a></td>
+        <td><a href="/order.html?service=${service.service}" class="btn primary small">Pesan Sekarang</a></td>
       `;
       
       servicesTable.appendChild(row);
@@ -77,7 +103,7 @@ function initServicesPage() {
     const categories = new Set();
     services.forEach(service => categories.add(service.category));
     
-    categoryFilter.innerHTML = '<option value="">All Categories</option>';
+    categoryFilter.innerHTML = '<option value="">Semua Kategori</option>';
     categories.forEach(category => {
       const option = document.createElement('option');
       option.value = category;
@@ -132,6 +158,9 @@ function initOrderPage() {
   const expiryTime = document.getElementById('expiryTime');
   const checkPaymentStatus = document.getElementById('checkPaymentStatus');
   const paymentStatus = document.getElementById('paymentStatus');
+  const submitButton = orderForm.querySelector('button[type="submit"]');
+  const submitButtonText = document.getElementById('submitButtonText');
+  const checkStatusText = document.getElementById('checkStatusText');
   
   const urlParams = new URLSearchParams(window.location.search);
   const serviceIdParam = urlParams.get('service');
@@ -149,6 +178,8 @@ function initOrderPage() {
   quantityInput.addEventListener('input', updatePriceCalculation);
   
   function fetchServiceDetails(serviceId) {
+    showLoading(paymentStatus, 'Memuat detail layanan...');
+    
     fetch(config.API_BASE_URL, {
       method: 'POST',
       headers: {
@@ -158,8 +189,14 @@ function initOrderPage() {
         action: 'services'
       })
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Gagal memuat detail layanan');
+      }
+      return response.json();
+    })
     .then(data => {
+      hideLoading(paymentStatus);
       if (Array.isArray(data)) {
         const service = data.find(s => s.service == serviceId);
         if (service) {
@@ -173,13 +210,23 @@ function initOrderPage() {
           serviceIdInput.dataset.rate = ratePer1000;
           updatePriceCalculation();
         } else {
-          alert('Service not found. Please check the Service ID.');
+          paymentStatus.innerHTML = `
+            <div class="alert error">
+              <i class="fas fa-times-circle"></i>
+              <p>Layanan tidak ditemukan. Silakan cek ID Layanan.</p>
+            </div>
+          `;
         }
       }
     })
     .catch(error => {
       console.error('Error fetching service details:', error);
-      alert('Failed to fetch service details. Please try again.');
+      paymentStatus.innerHTML = `
+        <div class="alert error">
+          <i class="fas fa-times-circle"></i>
+          <p>Gagal memuat detail layanan: ${error.message}</p>
+        </div>
+      `;
     });
   }
   
@@ -200,6 +247,45 @@ function initOrderPage() {
   orderForm.addEventListener('submit', function(e) {
     e.preventDefault();
     
+    // Validasi form
+    if (!serviceIdInput.value) {
+      paymentStatus.innerHTML = `
+        <div class="alert error">
+          <i class="fas fa-times-circle"></i>
+          <p>Silakan masukkan ID Layanan</p>
+        </div>
+      `;
+      return;
+    }
+    
+    if (!document.getElementById('link').value) {
+      paymentStatus.innerHTML = `
+        <div class="alert error">
+          <i class="fas fa-times-circle"></i>
+          <p>Silakan masukkan link halaman</p>
+        </div>
+      `;
+      return;
+    }
+    
+    const quantity = parseInt(quantityInput.value);
+    if (!quantity || quantity < parseInt(quantityInput.min) || quantity > parseInt(quantityInput.max)) {
+      paymentStatus.innerHTML = `
+        <div class="alert error">
+          <i class="fas fa-times-circle"></i>
+          <p>Jumlah tidak valid. Harap masukkan nilai antara ${quantityInput.min} dan ${quantityInput.max}</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Simpan teks asli tombol
+    const originalButtonText = submitButton.innerHTML;
+    
+    // Tampilkan loading pada tombol
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    submitButton.disabled = true;
+    
     const serviceId = serviceIdInput.value;
     const link = document.getElementById('link').value;
     const quantity = quantityInput.value;
@@ -209,39 +295,69 @@ function initOrderPage() {
     const rate = parseFloat(serviceIdInput.dataset.rate) || config.DEFAULT_RATE;
     const amount = Math.ceil((quantity / 1000) * rate);
     
-    createOrder(serviceId, link, quantity, runs, interval, amount);
+    createOrder(serviceId, link, quantity, runs, interval, amount)
+      .finally(() => {
+        // Kembalikan tombol ke keadaan semula
+        submitButton.innerHTML = originalButtonText;
+        submitButton.disabled = false;
+      });
   });
   
   function createOrder(serviceId, link, quantity, runs, interval, amount) {
-    fetch(config.API_BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'add',
-        service: serviceId,
-        link: link,
-        quantity: quantity,
-        runs: runs,
-        interval: interval
+    return new Promise((resolve, reject) => {
+      showLoading(paymentStatus, 'Membuat pesanan...');
+      
+      fetch(config.API_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'add',
+          service: serviceId,
+          link: link,
+          quantity: quantity,
+          runs: runs,
+          interval: interval
+        })
       })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.order) {
-        showPaymentModal(data.order, amount);
-      } else {
-        alert('Failed to create order: ' + (data.error || 'Unknown error'));
-      }
-    })
-    .catch(error => {
-      console.error('Error creating order:', error);
-      alert('Failed to create order. Please try again.');
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Gagal membuat pesanan');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.order) {
+          showPaymentModal(data.order, amount);
+          resolve(data);
+        } else {
+          const errorMsg = data.error || 'Gagal membuat pesanan: Error tidak diketahui';
+          paymentStatus.innerHTML = `
+            <div class="alert error">
+              <i class="fas fa-times-circle"></i>
+              <p>${errorMsg}</p>
+            </div>
+          `;
+          reject(new Error(errorMsg));
+        }
+      })
+      .catch(error => {
+        console.error('Error membuat pesanan:', error);
+        paymentStatus.innerHTML = `
+          <div class="alert error">
+            <i class="fas fa-times-circle"></i>
+            <p>Gagal membuat pesanan: ${error.message}</p>
+          </div>
+        `;
+        reject(error);
+      });
     });
   }
   
   function showPaymentModal(orderId, amount) {
+    showLoading(paymentStatus, 'Membuat pembayaran QRIS...');
+    
     fetch(config.PAYMENT_API_URL, {
       method: 'POST',
       headers: {
@@ -252,7 +368,12 @@ function initOrderPage() {
         orderId: orderId
       })
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Gagal membuat pembayaran');
+      }
+      return response.json();
+    })
     .then(data => {
       if (data.success) {
         qrCodeImage.src = data.data.qrImageUrl;
@@ -263,13 +384,31 @@ function initOrderPage() {
         paymentModal.style.display = 'block';
         paymentModal.dataset.paymentId = data.data.id;
         paymentModal.dataset.orderId = orderId;
+        
+        paymentStatus.innerHTML = `
+          <div class="alert info">
+            <i class="fas fa-info-circle"></i>
+            <p>Silakan scan QR code untuk melakukan pembayaran</p>
+          </div>
+        `;
       } else {
-        alert('Failed to create payment: ' + (data.error || 'Unknown error'));
+        const errorMsg = data.error || 'Gagal membuat pembayaran: Error tidak diketahui';
+        paymentStatus.innerHTML = `
+          <div class="alert error">
+            <i class="fas fa-times-circle"></i>
+            <p>${errorMsg}</p>
+          </div>
+        `;
       }
     })
     .catch(error => {
-      console.error('Error creating payment:', error);
-      alert('Failed to create payment. Please try again.');
+      console.error('Error membuat pembayaran:', error);
+      paymentStatus.innerHTML = `
+        <div class="alert error">
+          <i class="fas fa-times-circle"></i>
+          <p>Gagal membuat pembayaran: ${error.message}</p>
+        </div>
+      `;
     });
   }
   
@@ -283,9 +422,14 @@ function initOrderPage() {
     
     if (!paymentId) return;
     
-    paymentStatus.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Checking payment status...</p>';
+    // Simpan teks asli tombol
+    const originalButtonText = checkPaymentStatus.innerHTML;
     
+    // Tampilkan loading pada tombol
+    checkPaymentStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memeriksa...';
     checkPaymentStatus.disabled = true;
+    
+    showLoading(paymentStatus, 'Memeriksa status pembayaran...');
     
     fetch(config.VERIFY_PAYMENT_URL, {
       method: 'POST',
@@ -296,13 +440,18 @@ function initOrderPage() {
         paymentId: paymentId
       })
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Gagal memverifikasi pembayaran');
+      }
+      return response.json();
+    })
     .then(data => {
       if (data.success && data.data.status === 'paid') {
         paymentStatus.innerHTML = `
           <div class="alert success">
             <i class="fas fa-check-circle"></i>
-            <p>Payment completed! Your order #${orderId} is being processed.</p>
+            <p>Pembayaran berhasil! Pesanan #${orderId} sedang diproses.</p>
           </div>
         `;
         
@@ -311,23 +460,27 @@ function initOrderPage() {
           window.location.href = `/status.html?order=${orderId}`;
         }, 3000);
       } else {
+        const status = data.data?.status || 'pending';
         paymentStatus.innerHTML = `
           <div class="alert warning">
             <i class="fas fa-exclamation-circle"></i>
-            <p>Payment not completed yet. Status: ${data.data?.status || 'pending'}</p>
+            <p>Pembayaran belum selesai. Status: ${status}</p>
           </div>
         `;
-        checkPaymentStatus.disabled = false;
       }
     })
     .catch(error => {
-      console.error('Error verifying payment:', error);
+      console.error('Error memverifikasi pembayaran:', error);
       paymentStatus.innerHTML = `
         <div class="alert error">
           <i class="fas fa-times-circle"></i>
-          <p>Failed to verify payment. Please try again.</p>
+          <p>Gagal memverifikasi pembayaran: ${error.message}</p>
         </div>
       `;
+    })
+    .finally(() => {
+      // Kembalikan tombol ke keadaan semula
+      checkPaymentStatus.innerHTML = originalButtonText;
       checkPaymentStatus.disabled = false;
     });
   });
@@ -361,7 +514,7 @@ function initStatusPage() {
     if (orderId) {
       checkOrderStatus(orderId);
     } else {
-      alert('Please enter an Order ID');
+      showAlert('error', 'Silakan masukkan ID Pesanan');
     }
   });
   
@@ -370,11 +523,14 @@ function initStatusPage() {
     if (orderIds) {
       checkBulkOrderStatus(orderIds);
     } else {
-      alert('Please enter Order IDs');
+      showAlert('error', 'Silakan masukkan ID Pesanan');
     }
   });
   
   function checkOrderStatus(orderId) {
+    showLoading(noStatus, 'Memeriksa status pesanan...');
+    statusCard.classList.add('hidden');
+    
     fetch(config.API_BASE_URL, {
       method: 'POST',
       headers: {
@@ -385,8 +541,14 @@ function initStatusPage() {
         order: orderId
       })
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Gagal memeriksa status pesanan');
+      }
+      return response.json();
+    })
     .then(data => {
+      hideLoading(noStatus);
       if (data.error) {
         displayStatusError(orderId, data.error);
       } else {
@@ -395,11 +557,13 @@ function initStatusPage() {
     })
     .catch(error => {
       console.error('Error checking order status:', error);
-      displayStatusError(orderId, 'Failed to check status');
+      displayStatusError(orderId, error.message);
     });
   }
   
   function checkBulkOrderStatus(orderIds) {
+    showLoading(bulkStatusResult, 'Memeriksa status pesanan...');
+    
     fetch(config.API_BASE_URL, {
       method: 'POST',
       headers: {
@@ -410,13 +574,24 @@ function initStatusPage() {
         orders: orderIds
       })
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Gagal memeriksa status massal');
+      }
+      return response.json();
+    })
     .then(data => {
+      hideLoading(bulkStatusResult);
       displayBulkStatusResult(data);
     })
     .catch(error => {
       console.error('Error checking bulk order status:', error);
-      bulkStatusResult.innerHTML = '<div class="alert error">Failed to check bulk status</div>';
+      bulkStatusResult.innerHTML = `
+        <div class="alert error">
+          <i class="fas fa-times-circle"></i>
+          <p>Gagal memeriksa status massal: ${error.message}</p>
+        </div>
+      `;
     });
   }
   
@@ -456,7 +631,12 @@ function initStatusPage() {
     bulkStatusResult.innerHTML = '';
     
     if (typeof data !== 'object') {
-      bulkStatusResult.innerHTML = '<div class="alert error">Invalid response format</div>';
+      bulkStatusResult.innerHTML = `
+        <div class="alert error">
+          <i class="fas fa-times-circle"></i>
+          <p>Format respon tidak valid</p>
+        </div>
+      `;
       return;
     }
     
@@ -464,11 +644,11 @@ function initStatusPage() {
     table.innerHTML = `
       <thead>
         <tr>
-          <th>Order ID</th>
+          <th>ID Pesanan</th>
           <th>Status</th>
-          <th>Charge</th>
-          <th>Start Count</th>
-          <th>Remains</th>
+          <th>Biaya</th>
+          <th>Jumlah Awal</th>
+          <th>Sisa</th>
         </tr>
       </thead>
       <tbody id="bulkStatusList"></tbody>
@@ -498,5 +678,20 @@ function initStatusPage() {
       
       tbody.appendChild(row);
     }
+  }
+  
+  function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert ${type}`;
+    alertDiv.innerHTML = `
+      <i class="fas fa-${type === 'error' ? 'times-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+      <p>${message}</p>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+      alertDiv.remove();
+    }, 3000);
   }
 }

@@ -1,10 +1,9 @@
-<!-- order.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Place Order - SMM Panel</title>
+  <title>Buat Pesanan - SMM Panel</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -14,69 +13,73 @@
       <h1>SMM Panel</h1>
       <nav>
         <ul>
-          <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
-          <li><a href="/services.html"><i class="fas fa-list"></i> Services</a></li>
-          <li><a href="/order.html" class="active"><i class="fas fa-shopping-cart"></i> Order</a></li>
-          <li><a href="/status.html"><i class="fas fa-history"></i> Order Status</a></li>
+          <li><a href="/"><i class="fas fa-home"></i> Beranda</a></li>
+          <li><a href="/services.html"><i class="fas fa-list"></i> Layanan</a></li>
+          <li><a href="/order.html" class="active"><i class="fas fa-shopping-cart"></i> Pesan</a></li>
+          <li><a href="/status.html"><i class="fas fa-history"></i> Status Pesanan</a></li>
         </ul>
       </nav>
     </div>
   </header>
 
   <main class="container">
-    <h2>Place New Order</h2>
+    <h2>Buat Pesanan Baru</h2>
     
     <form id="orderForm">
       <div class="form-group">
-        <label for="serviceId">Service ID:</label>
+        <label for="serviceId">ID Layanan:</label>
         <input type="number" id="serviceId" required>
       </div>
       
       <div class="form-group">
-        <label for="link">Link to Page:</label>
+        <label for="link">Link Halaman:</label>
         <input type="url" id="link" required placeholder="https://example.com">
       </div>
       
       <div class="form-group">
-        <label for="quantity">Quantity:</label>
+        <label for="quantity">Jumlah:</label>
         <input type="number" id="quantity" required>
         <span id="quantityInfo" class="info-text"></span>
       </div>
       
       <div class="form-group">
-        <label for="runs">Runs (optional):</label>
+        <label for="runs">Jumlah Run (opsional):</label>
         <input type="number" id="runs">
       </div>
       
       <div class="form-group">
-        <label for="interval">Interval in minutes (optional):</label>
+        <label for="interval">Interval dalam menit (opsional):</label>
         <input type="number" id="interval">
       </div>
       
       <div class="price-summary">
-        <h3>Order Summary</h3>
-        <p>Rate: <span id="rateDisplay">-</span> per 1000</p>
-        <p>Quantity: <span id="quantityDisplay">0</span></p>
-        <p>Total Price: <span id="totalPrice">Rp0</span></p>
+        <h3>Ringkasan Pesanan</h3>
+        <p>Harga: <span id="rateDisplay">-</span> per 1000</p>
+        <p>Jumlah: <span id="quantityDisplay">0</span></p>
+        <p>Total Harga: <span id="totalPrice">Rp0</span></p>
       </div>
       
-      <button type="submit" class="btn primary">Proceed to Payment</button>
+      <button type="submit" class="btn primary" id="submitOrderBtn">
+        <span id="submitButtonText">Proses Pembayaran</span>
+      </button>
     </form>
     
     <div id="paymentModal" class="modal">
       <div class="modal-content">
         <span class="close">&times;</span>
-        <h3>Complete Your Payment</h3>
+        <h3>Selesaikan Pembayaran Anda</h3>
         <div id="paymentContent">
           <div id="qrCodeContainer">
             <img id="qrCodeImage" src="" alt="QR Code">
-            <p>Scan this QR code to complete your payment</p>
+            <p>Scan QR code ini untuk menyelesaikan pembayaran</p>
           </div>
           <div id="paymentDetails">
-            <p><strong>Order ID:</strong> <span id="orderIdDisplay"></span></p>
-            <p><strong>Amount:</strong> <span id="paymentAmount"></span></p>
-            <p><strong>Expires at:</strong> <span id="expiryTime"></span></p>
-            <button id="checkPaymentStatus" class="btn secondary">Check Payment Status</button>
+            <p><strong>ID Pesanan:</strong> <span id="orderIdDisplay"></span></p>
+            <p><strong>Jumlah:</strong> <span id="paymentAmount"></span></p>
+            <p><strong>Kadaluarsa:</strong> <span id="expiryTime"></span></p>
+            <button id="checkPaymentStatus" class="btn secondary">
+              <span id="checkStatusText">Periksa Status Pembayaran</span>
+            </button>
           </div>
         </div>
         <div id="paymentStatus"></div>
@@ -86,7 +89,7 @@
 
   <footer>
     <div class="container">
-      <p>&copy; 2023 SMM Panel Professional. All rights reserved.</p>
+      <p>&copy; 2023 SMM Panel Professional. Semua hak dilindungi.</p>
     </div>
   </footer>
 
