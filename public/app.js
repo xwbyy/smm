@@ -1,5 +1,5 @@
+// app.js
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize based on current page
   const path = window.location.pathname;
   
   if (path.endsWith('services.html')) {
@@ -18,7 +18,6 @@ function initServicesPage() {
   const searchInput = document.getElementById('serviceSearch');
   const categoryFilter = document.getElementById('categoryFilter');
   
-  // Fetch services from API
   fetchServices();
   
   function fetchServices() {
@@ -58,7 +57,7 @@ function initServicesPage() {
       const row = document.createElement('tr');
       
       // Calculate price per 1000
-      const ratePer1000 = service.rate ? parseFloat(service.rate) * 1000 : config.DEFAULT_RATE;
+      const ratePer1000 = service.rate ? parseFloat(service.rate) : config.DEFAULT_RATE;
       
       row.innerHTML = `
         <td>${service.service}</td>
@@ -87,7 +86,6 @@ function initServicesPage() {
     });
   }
   
-  // Search and filter functionality
   searchInput.addEventListener('input', filterServices);
   categoryFilter.addEventListener('change', filterServices);
   
@@ -110,7 +108,6 @@ function initServicesPage() {
     });
   }
   
-  // Check if we came from a service link with parameters
   const urlParams = new URLSearchParams(window.location.search);
   const serviceId = urlParams.get('service');
   if (serviceId) {
@@ -136,7 +133,6 @@ function initOrderPage() {
   const checkPaymentStatus = document.getElementById('checkPaymentStatus');
   const paymentStatus = document.getElementById('paymentStatus');
   
-  // Check URL for service ID parameter
   const urlParams = new URLSearchParams(window.location.search);
   const serviceIdParam = urlParams.get('service');
   if (serviceIdParam) {
@@ -144,14 +140,12 @@ function initOrderPage() {
     fetchServiceDetails(serviceIdParam);
   }
   
-  // Fetch service details when ID changes
   serviceIdInput.addEventListener('change', function() {
     if (this.value) {
       fetchServiceDetails(this.value);
     }
   });
   
-  // Update quantity info and price calculation
   quantityInput.addEventListener('input', updatePriceCalculation);
   
   function fetchServiceDetails(serviceId) {
@@ -169,19 +163,14 @@ function initOrderPage() {
       if (Array.isArray(data)) {
         const service = data.find(s => s.service == serviceId);
         if (service) {
-          // Update quantity constraints
           quantityInput.min = service.min;
           quantityInput.max = service.max;
           quantityInfo.textContent = `Min: ${service.min}, Max: ${service.max}`;
           
-          // Update rate display
-          const ratePer1000 = service.rate ? parseFloat(service.rate) * 1000 : config.DEFAULT_RATE;
+          const ratePer1000 = service.rate ? parseFloat(service.rate) : config.DEFAULT_RATE;
           rateDisplay.textContent = `Rp${ratePer1000.toLocaleString('id-ID')}`;
           
-          // Store service rate for calculations
           serviceIdInput.dataset.rate = ratePer1000;
-          
-          // Trigger price calculation
           updatePriceCalculation();
         } else {
           alert('Service not found. Please check the Service ID.');
@@ -201,14 +190,13 @@ function initOrderPage() {
     quantityDisplay.textContent = quantity;
     
     if (quantity > 0) {
-      const price = (quantity / 1000) * rate;
+      const price = Math.ceil((quantity / 1000) * rate);
       totalPrice.textContent = `Rp${price.toLocaleString('id-ID')}`;
     } else {
       totalPrice.textContent = 'Rp0';
     }
   }
   
-  // Form submission
   orderForm.addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -218,11 +206,9 @@ function initOrderPage() {
     const runs = document.getElementById('runs').value || undefined;
     const interval = document.getElementById('interval').value || undefined;
     
-    // Calculate total price
     const rate = parseFloat(serviceIdInput.dataset.rate) || config.DEFAULT_RATE;
     const amount = Math.ceil((quantity / 1000) * rate);
     
-    // Create order
     createOrder(serviceId, link, quantity, runs, interval, amount);
   });
   
@@ -244,10 +230,9 @@ function initOrderPage() {
     .then(response => response.json())
     .then(data => {
       if (data.order) {
-        // Show payment modal
         showPaymentModal(data.order, amount);
       } else {
-        alert('Failed to create order. Please try again.');
+        alert('Failed to create order: ' + (data.error || 'Unknown error'));
       }
     })
     .catch(error => {
@@ -257,33 +242,29 @@ function initOrderPage() {
   }
   
   function showPaymentModal(orderId, amount) {
-    // Create payment request
     fetch(config.PAYMENT_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        amount: amount
+        amount: amount,
+        orderId: orderId
       })
     })
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        // Update modal with payment details
         qrCodeImage.src = data.data.qrImageUrl;
         orderIdDisplay.textContent = orderId;
         paymentAmount.textContent = `Rp${amount.toLocaleString('id-ID')}`;
         expiryTime.textContent = data.data.expired_at;
         
-        // Show modal
         paymentModal.style.display = 'block';
-        
-        // Store payment data for status checking
         paymentModal.dataset.paymentId = data.data.id;
         paymentModal.dataset.orderId = orderId;
       } else {
-        alert('Failed to create payment. Please try again.');
+        alert('Failed to create payment: ' + (data.error || 'Unknown error'));
       }
     })
     .catch(error => {
@@ -292,12 +273,10 @@ function initOrderPage() {
     });
   }
   
-  // Close modal
   closeModal.addEventListener('click', function() {
     paymentModal.style.display = 'none';
   });
   
-  // Check payment status
   checkPaymentStatus.addEventListener('click', function() {
     const paymentId = paymentModal.dataset.paymentId;
     const orderId = paymentModal.dataset.orderId;
@@ -306,25 +285,53 @@ function initOrderPage() {
     
     paymentStatus.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Checking payment status...</p>';
     
-    // In a real app, you would call your backend to check payment status
-    // This is a simplified version
-    setTimeout(() => {
+    checkPaymentStatus.disabled = true;
+    
+    fetch(config.VERIFY_PAYMENT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        paymentId: paymentId
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.data.status === 'paid') {
+        paymentStatus.innerHTML = `
+          <div class="alert success">
+            <i class="fas fa-check-circle"></i>
+            <p>Payment completed! Your order #${orderId} is being processed.</p>
+          </div>
+        `;
+        
+        setTimeout(() => {
+          paymentModal.style.display = 'none';
+          window.location.href = `/status.html?order=${orderId}`;
+        }, 3000);
+      } else {
+        paymentStatus.innerHTML = `
+          <div class="alert warning">
+            <i class="fas fa-exclamation-circle"></i>
+            <p>Payment not completed yet. Status: ${data.data?.status || 'pending'}</p>
+          </div>
+        `;
+        checkPaymentStatus.disabled = false;
+      }
+    })
+    .catch(error => {
+      console.error('Error verifying payment:', error);
       paymentStatus.innerHTML = `
-        <div class="alert success">
-          <i class="fas fa-check-circle"></i>
-          <p>Payment completed! Your order #${orderId} is being processed.</p>
+        <div class="alert error">
+          <i class="fas fa-times-circle"></i>
+          <p>Failed to verify payment. Please try again.</p>
         </div>
       `;
-      
-      // Close modal after 3 seconds
-      setTimeout(() => {
-        paymentModal.style.display = 'none';
-        window.location.href = `/status.html?order=${orderId}`;
-      }, 3000);
-    }, 2000);
+      checkPaymentStatus.disabled = false;
+    });
   });
   
-  // Close modal when clicking outside
   window.addEventListener('click', function(event) {
     if (event.target === paymentModal) {
       paymentModal.style.display = 'none';
@@ -342,7 +349,6 @@ function initStatusPage() {
   const checkBulkStatusBtn = document.getElementById('checkBulkStatusBtn');
   const bulkStatusResult = document.getElementById('bulkStatusResult');
   
-  // Check URL for order ID parameter
   const urlParams = new URLSearchParams(window.location.search);
   const orderIdParam = urlParams.get('order');
   if (orderIdParam) {
@@ -350,7 +356,6 @@ function initStatusPage() {
     checkOrderStatus(orderIdParam);
   }
   
-  // Single order status check
   checkStatusBtn.addEventListener('click', function() {
     const orderId = orderIdInput.value.trim();
     if (orderId) {
@@ -360,7 +365,6 @@ function initStatusPage() {
     }
   });
   
-  // Bulk order status check
   checkBulkStatusBtn.addEventListener('click', function() {
     const orderIds = bulkOrderIds.value.trim();
     if (orderIds) {
@@ -441,7 +445,6 @@ function initStatusPage() {
     document.getElementById('statusRemains').textContent = '-';
     document.getElementById('statusCurrency').textContent = '-';
     
-    // Show error message
     const statusDetails = document.querySelector('.status-details');
     const errorElement = document.createElement('p');
     errorElement.textContent = `Error: ${error}`;
