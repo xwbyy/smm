@@ -11,5 +11,9 @@
       "src": "/(.*)",
       "dest": "server.js"
     }
-  ]
+  ],
+  "env": {
+    "API_KEY": "@smm_api_key",
+    "PAYMENT_API_KEY": "@payment_api_key"
+  }
 }

@@ -13,26 +13,45 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public'), {
-  extensions: ['html']
-}));
+// Cache for services
+let servicesCache = {
+  data: null,
+  timestamp: 0,
+  ttl: 300000 // 5 minutes cache
+};
 
-// API Proxy Endpoint
+// API Proxy Endpoint with caching
 app.post('/api/proxy', async (req, res) => {
   try {
     const { action, ...params } = req.body;
+    
+    // Check cache for services request
+    if (action === 'services' && servicesCache.data && 
+        (Date.now() - servicesCache.timestamp) < servicesCache.ttl) {
+      return res.json(servicesCache.data);
+    }
+    
     const apiUrl = 'https://indosmm.id/api/v2';
-
+    
     const response = await axios.post(apiUrl, {
-      key: process.env.API_KEY || '4e59a83d29629d875f9eaa48134d630d',
+      key: process.env.API_KEY || 'your-api-key',
       action,
       ...params
     }, {
       timeout: 10000 // Timeout 10 detik
     });
 
+    // Cache services data
+    if (action === 'services' && response.data) {
+      servicesCache = {
+        data: response.data,
+        timestamp: Date.now(),
+        ttl: 300000
+      };
+    }
+    
     res.json(response.data);
   } catch (error) {
     console.error('API Error:', error.message);
@@ -55,7 +74,7 @@ app.post('/api/proxy', async (req, res) => {
 app.post('/api/create-payment', async (req, res) => {
   try {
     const { amount, orderId } = req.body;
-    const API_KEY = 'Fupei-pedia-l3p5q04yqvppzw22';
+    const API_KEY = process.env.PAYMENT_API_KEY || 'Fupei-pedia-l3p5q04yqvppzw22';
     const API_URL = 'https://fupei-pedia.web.id/api/v1/deposit';
 
     // Validasi input
@@ -109,10 +128,8 @@ app.post('/api/create-payment', async (req, res) => {
     
     let errorMsg = 'Terjadi kesalahan saat memproses pembayaran';
     if (error.response) {
-      // Error dari API
       errorMsg = error.response.data?.message || errorMsg;
     } else if (error.request) {
-      // Tidak ada response dari server
       errorMsg = 'Tidak ada respon dari server pembayaran';
     }
 
@@ -127,7 +144,7 @@ app.post('/api/create-payment', async (req, res) => {
 app.post('/api/verify-payment', async (req, res) => {
   try {
     const { paymentId } = req.body;
-    const API_KEY = 'Fupei-pedia-l3p5q04yqvppzw22';
+    const API_KEY = process.env.PAYMENT_API_KEY || 'Fupei-pedia-l3p5q04yqvppzw22';
     const API_URL = 'https://fupei-pedia.web.id/api/v1/deposit';
 
     if (!paymentId) {
@@ -179,7 +196,7 @@ app.post('/api/verify-payment', async (req, res) => {
   }
 });
 
-// Handle all other routes
+// Handle all other routes - serve static files
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
