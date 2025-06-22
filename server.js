@@ -29,16 +29,29 @@ app.post('/api/proxy', async (req, res) => {
       key: process.env.API_KEY || 'your-api-key',
       action,
       ...params
+    }, {
+      timeout: 10000 // Timeout 10 detik
     });
 
     res.json(response.data);
   } catch (error) {
     console.error('API Error:', error.message);
-    res.status(500).json({ error: 'Failed to process API request' });
+    
+    let errorMessage = 'Gagal memproses permintaan API';
+    if (error.response) {
+      errorMessage = error.response.data?.error || errorMessage;
+    } else if (error.request) {
+      errorMessage = 'Tidak ada respon dari server API';
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: errorMessage
+    });
   }
 });
 
-// QRIS Payment Endpoint - Diperbaiki
+// QRIS Payment Endpoint
 app.post('/api/create-payment', async (req, res) => {
   try {
     const { amount, orderId } = req.body;
@@ -46,7 +59,7 @@ app.post('/api/create-payment', async (req, res) => {
     const API_URL = 'https://fupei-pedia.web.id/api/v1/deposit';
 
     // Validasi input
-    if (!amount || isNaN(amount) {
+    if (!amount || isNaN(amount)) {
       return res.status(400).json({ 
         success: false,
         error: 'Jumlah pembayaran tidak valid'
@@ -110,7 +123,7 @@ app.post('/api/create-payment', async (req, res) => {
   }
 });
 
-// Verify Payment Endpoint - Diperbaiki
+// Verify Payment Endpoint
 app.post('/api/verify-payment', async (req, res) => {
   try {
     const { paymentId } = req.body;
@@ -173,5 +186,5 @@ app.get('*', (req, res) => {
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server berjalan di port ${port}`);
 });
