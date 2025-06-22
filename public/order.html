@@ -6,6 +6,7 @@
   <title>Buat Pesanan - SMM Panel</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
   <header>
@@ -16,7 +17,7 @@
           <li><a href="/"><i class="fas fa-home"></i> Beranda</a></li>
           <li><a href="/services.html"><i class="fas fa-list"></i> Layanan</a></li>
           <li><a href="/order.html" class="active"><i class="fas fa-shopping-cart"></i> Pesan</a></li>
-          <li><a href="/status.html"><i class="fas fa-history"></i> Status Pesanan</a></li>
+          <li><a href="/status.html"><i class="fas fa-history"></i> Status</a></li>
         </ul>
       </nav>
     </div>
@@ -60,8 +61,11 @@
       </div>
       
       <button type="submit" class="btn primary" id="submitOrderBtn">
+        <i class="fas fa-credit-card"></i>
         <span id="submitButtonText">Proses Pembayaran</span>
       </button>
+      
+      <div id="paymentStatus"></div>
     </form>
     
     <div id="paymentModal" class="modal">
@@ -78,22 +82,27 @@
             <p><strong>Jumlah:</strong> <span id="paymentAmount"></span></p>
             <p><strong>Kadaluarsa:</strong> <span id="expiryTime"></span></p>
             <button id="checkPaymentStatus" class="btn secondary">
+              <i class="fas fa-sync-alt"></i>
               <span id="checkStatusText">Periksa Status Pembayaran</span>
             </button>
           </div>
         </div>
-        <div id="paymentStatus"></div>
+        <div id="paymentStatusModal"></div>
       </div>
     </div>
   </main>
 
   <footer>
     <div class="container">
-      <p>&copy; 2023 SMM Panel Professional. Semua hak dilindungi.</p>
+      <p>&copy; <span id="current-year"></span> SMM Panel Professional. Semua hak dilindungi.</p>
     </div>
   </footer>
 
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <script>
+    // Set current year in footer
+    document.getElementById('current-year').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>

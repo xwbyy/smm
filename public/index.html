@@ -6,6 +6,7 @@
   <title>SMM Panel Professional</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
   <header>
@@ -16,7 +17,7 @@
           <li><a href="/" class="active"><i class="fas fa-home"></i> Beranda</a></li>
           <li><a href="/services.html"><i class="fas fa-list"></i> Layanan</a></li>
           <li><a href="/order.html"><i class="fas fa-shopping-cart"></i> Pesan</a></li>
-          <li><a href="/status.html"><i class="fas fa-history"></i> Status Pesanan</a></li>
+          <li><a href="/status.html"><i class="fas fa-history"></i> Status</a></li>
         </ul>
       </nav>
     </div>
@@ -27,8 +28,8 @@
       <h2>Layanan SMM Professional</h2>
       <p>Tingkatkan media sosial Anda dengan layanan berkualitas tinggi dan harga kompetitif.</p>
       <div class="cta-buttons">
-        <a href="/services.html" class="btn primary">Lihat Layanan</a>
-        <a href="/order.html" class="btn secondary">Buat Pesanan</a>
+        <a href="/services.html" class="btn primary"><i class="fas fa-list"></i> Lihat Layanan</a>
+        <a href="/order.html" class="btn secondary"><i class="fas fa-shopping-cart"></i> Buat Pesanan</a>
       </div>
     </section>
 
@@ -53,11 +54,15 @@
 
   <footer>
     <div class="container">
-      <p>&copy; 2023 SMM Panel Professional. Semua hak dilindungi.</p>
+      <p>&copy; <span id="current-year"></span> SMM Panel Professional. Semua hak dilindungi.</p>
     </div>
   </footer>
 
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <script>
+    // Set current year in footer
+    document.getElementById('current-year').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
