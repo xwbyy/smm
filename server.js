@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -13,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the public directory
+// Serve static files
 app.use(express.static(path.join(__dirname, 'public'), {
   extensions: ['html']
 }));
@@ -40,7 +41,7 @@ app.post('/api/proxy', async (req, res) => {
 // QRIS Payment Endpoint
 app.post('/api/create-payment', async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { amount, orderId } = req.body;
     const API_KEY = 'Fupei-pedia-l3p5q04yqvppzw22';
     const API_URL = 'https://fupei-pedia.web.id/api/v1/deposit';
 
@@ -64,7 +65,8 @@ app.post('/api/create-payment', async (req, res) => {
       success: true,
       data: {
         ...response.data.data,
-        qrImageUrl
+        qrImageUrl,
+        orderId // Include orderId in response
       }
     });
   } catch (error) {
@@ -76,7 +78,41 @@ app.post('/api/create-payment', async (req, res) => {
   }
 });
 
-// Handle all other routes by serving the index.html
+// Verify Payment Endpoint
+app.post('/api/verify-payment', async (req, res) => {
+  try {
+    const { paymentId } = req.body;
+    const API_KEY = 'Fupei-pedia-l3p5q04yqvppzw22';
+    const API_URL = 'https://fupei-pedia.web.id/api/v1/deposit';
+
+    const response = await axios.get(`${API_URL}/status`, {
+      params: {
+        id: paymentId,
+        apikey: API_KEY
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0'
+      }
+    });
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to verify payment');
+    }
+
+    res.json({
+      success: true,
+      data: response.data.data
+    });
+  } catch (error) {
+    console.error('Payment Verification Error:', error.message);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || 'Failed to verify payment'
+    });
+  }
+});
+
+// Handle all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
